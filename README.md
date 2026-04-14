@@ -1,2 +1,3 @@
-# balancedgame2
-Balanced Game 2: Electric Boogaloo
+# Balanced Game 2
+
+Back again!
