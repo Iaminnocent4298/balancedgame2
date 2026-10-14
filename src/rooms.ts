@@ -1,8 +1,9 @@
 import {
-  doc, onSnapshot, runTransaction, serverTimestamp, deleteField,
+  collection, doc, onSnapshot, query, runTransaction, serverTimestamp, deleteField, where,
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { DEFAULT_STATS, type Stats } from "./stats";
 
 export const ROOM_MODES = [
   { id: "speed", label: "Speed" },
@@ -83,7 +84,7 @@ export async function createRoom(
           members: { [uid]: player.data()?.name ?? "Player" },
           createdAt: serverTimestamp(),
         });
-        tx.update(playerRef, { roomId: code });
+        tx.update(playerRef, { roomId: code, stats: { ...DEFAULT_STATS } });
       });
       return code;
     } catch (err) {
@@ -114,7 +115,7 @@ export async function joinRoom(uid: string, rawCode: string) {
     }
 
     tx.update(roomRef, { [`members.${uid}`]: player.data()?.name ?? "Player" });
-    tx.update(playerRef, { roomId: code });
+    tx.update(playerRef, { roomId: code, stats: { ...DEFAULT_STATS } });
   });
 }
 
@@ -141,7 +142,7 @@ export async function leaveRoom(uid: string) {
         });
       }
     }
-    tx.update(playerRef, { roomId: null });
+    tx.update(playerRef, { roomId: null, stats: deleteField() });
   });
 }
 
@@ -151,6 +152,25 @@ export function subscribeToRoom(roomId: string, onChange: (room: Room | null) =>
       snap.exists()
         ? { id: snap.id, ...(snap.data({ serverTimestamps: "estimate" }) as Omit<Room, "id">) }
         : null
+    )
+  );
+}
+
+export type RoomPlayer = { id: string; name: string; stats: Stats | null };
+
+// Live list of everyone whose roomId matches this room's code
+export function subscribeToRoomPlayers(
+  roomId: string,
+  onChange: (players: RoomPlayer[]) => void
+) {
+  const q = query(collection(db, "players"), where("roomId", "==", roomId));
+  return onSnapshot(q, (snap) =>
+    onChange(
+      snap.docs.map((d) => ({
+        id: d.id,
+        name: d.data().name ?? "Player",
+        stats: (d.data().stats as Stats | undefined) ?? null,
+      }))
     )
   );
 }

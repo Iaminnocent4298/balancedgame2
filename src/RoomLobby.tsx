@@ -26,43 +26,51 @@ export default function RoomLobby({ uid }: { uid: string }) {
   }
 
   return (
-    <div>
-      <h2>Create a room</h2>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          run(() => createRoom(uid, { name, mode, maxPlayers }));
-        }}
-      >
-        <input placeholder="Room name" value={name}
-          onChange={(e) => setName(e.target.value)} required maxLength={30} />
-        <select value={mode} onChange={(e) => setMode(e.target.value as RoomMode)}>
-          {ROOM_MODES.map((m) => (
-            <option key={m.id} value={m.id}>{m.label}</option>
-          ))}
-        </select>
-        <label>
-          Max players{" "}
-          <input type="number" min={MIN_PLAYERS} max={MAX_PLAYERS} value={maxPlayers}
-            onChange={(e) => setMaxPlayers(Number(e.target.value))} />
-        </label>
-        <button type="submit" disabled={busy}>Create</button>
-      </form>
+    <div className="center-page">
+      <div className="lobby">
+        <section className="box lobby-box">
+          <h2>Create a room</h2>
+          <form
+            className="form-col"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run(() => createRoom(uid, { name, mode, maxPlayers }));
+            }}
+          >
+            <input placeholder="Room name" value={name}
+              onChange={(e) => setName(e.target.value)} required maxLength={30} />
+            <select value={mode} onChange={(e) => setMode(e.target.value as RoomMode)}>
+              {ROOM_MODES.map((m) => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
+            <label>
+              Max players
+              <input type="number" min={MIN_PLAYERS} max={MAX_PLAYERS} value={maxPlayers}
+                onChange={(e) => setMaxPlayers(Number(e.target.value))} />
+            </label>
+            <button type="submit" disabled={busy}>Create</button>
+          </form>
+        </section>
 
-      <h2>Join a room</h2>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          run(() => joinRoom(uid, code));
-        }}
-      >
-        <input placeholder="Room code" value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
-            maxLength={4} required />
-        <button type="submit" disabled={busy}>Join</button>
-      </form>
+        <section className="box lobby-box">
+          <h2>Join a room</h2>
+          <form
+            className="form-col"
+            onSubmit={(e) => {
+              e.preventDefault();
+              run(() => joinRoom(uid, code));
+            }}
+          >
+            <input placeholder="Room code" value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
+              maxLength={4} required />
+            <button type="submit" disabled={busy}>Join</button>
+          </form>
+        </section>
+      </div>
 
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
+      {error && <div className="box error">{error}</div>}
     </div>
   );
 }

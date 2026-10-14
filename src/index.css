@@ -1,111 +1,279 @@
+/* ===== Theme: change colours and sizes here ===== */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --bg-top: #a200d1;
+  --bg-bottom: #2511b1;
+  --border: #7bcbf7;
+  --accent: #a812e7;          /* buttons, top bar, table fill */
+  --accent-hover: #bb3df2;
+  --accent-selected: #7a0aa3; /* the open tab */
+  --content: #a812e7;         /* text on light boxes */
+  --panel-bg: #faf5ff;
+  --radius-box: 14px;
+  --radius-button: 10px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/* ===== Base ===== */
+*, *::before, *::after { box-sizing: border-box; }
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
+html, body, #root { width: 100%; max-width: none; }
 
 body {
   margin: 0;
+  min-height: 100vh;
+  font-family: "Ubuntu", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #fff; /* text outside boxes, like "Loading..." */
+  background-color: var(--bg-bottom);
+  background-image: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom));
+  background-attachment: fixed; /* gradient always fills the screen */
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+#root { margin: 0; padding: 1rem; text-align: left; }
+
+/* Form controls don't inherit the page font unless told to */
+button, input, select, textarea { font: inherit; }
+
+/* ===== Boxes (cards) ===== */
+.box {
+  background: var(--accent);
+  color: #fff;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-box);
+  padding: 1rem;
+  margin: 0 0 1rem;
+}
+.box > :first-child { margin-top: 0; }
+.box > :last-child { margin-bottom: 0; }
+
+.error { color: #ffc2cb; } /* light red, readable on purple. Must stay below .box */
+
+/* ===== App layout ===== */
+.app { min-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
+
+/* ===== Banner (above everything, except inside rooms) ===== */
+.banner { display: block; width: min(560px, 100%); height: auto; margin: 0.5rem auto 1rem; }
+
+/* ===== Top bar ===== */
+.topbar {
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+}
+.topbar-img { display: block; height: 44px; width: auto; max-width: 60%; object-fit: contain; }
+.topbar-user { display: flex; align-items: center; gap: 0.75rem; }
+
+/* ===== Buttons ===== */
+button {
+  background: var(--accent);
+  color: #fff;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-button);
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: var(--accent-hover); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ===== Inputs ===== */
+input, select {
+  background: #fff;
+  color: var(--content);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-button);
+  padding: 0.4rem 0.6rem;
+}
+input::placeholder { color: var(--content); opacity: 0.6; }
+
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid var(--border);
+  outline-offset: 2px;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
+/* ===== Layout helpers ===== */
+.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.form-col { display: flex; flex-direction: column; gap: 0.6rem; }
+.form-col label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
+
+/* ===== Tabs ===== */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+  border-bottom: 1px solid #fff;
 }
-p {
+.tab,
+.tab:hover:not(:disabled) {
+  background: none;
+  border: none;
+  border-radius: var(--radius-button);
+  color: #fff;
+  padding: 0.5rem 1rem;
+}
+.tab:hover:not(:disabled) { background: rgba(255, 255, 255, 0.1); }
+.tab[aria-selected="true"],
+.tab[aria-selected="true"]:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+}
+
+/* ===== Info boxes (Room info / Game info) ===== */
+.info-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center; /* boxes centered as a group */
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.info-row .box { margin: 0; min-width: 260px; }
+
+.info-box { background: var(--accent); color: #fff; text-align: center; }
+.info-box h2 { font-size: 1.2rem; margin: 0 0 0.6rem; }
+.info-list { list-style: none; margin: 0; padding: 0; line-height: 1.9; }
+
+.room-code { letter-spacing: 0.15em; }
+.clock { font-weight: 700; font-variant-numeric: tabular-nums; }
+.center-row { display: flex; justify-content: center; margin-bottom: 1rem; }
+
+/* Month colours, by season. PLACEHOLDERS: replace with yours.
+   The boxes are purple, so keep these fairly light. */
+.season-winter { color: #a8e1ff; }
+.season-spring { color: #a8f5a2; }
+.season-summer { color: #ffe27a; }
+.season-fall   { color: #ffb36b; }
+
+.year { color: #00def2; font-weight: 700; }
+
+/* ===== Stats table ===== */
+.table-scroll { overflow-x: auto; }
+
+.stats-table {
+  margin: 0 auto;                   /* centers the table */
+  border-collapse: collapse;
+  background: var(--accent);
+  color: #fff;
+  border: 4px solid var(--border);
+}
+.stats-table th,
+.stats-table td {
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  text-align: center;               /* centers the cell contents */
+  white-space: nowrap;
+}
+.stats-table tbody th { font-weight: 400; }
+
+/* ===== Stat colours =====
+   Every stat row gets the class "stat-<id>", where <id> is the id in stats.ts.
+   These are PLACEHOLDER colours: replace them with yours. Class names are
+   case-sensitive. The table is purple, so use LIGHT colours: dark ones
+   (like dark red) will be hard to read.
+   To colour only the stat's name, use ".stat-health th" instead. */
+.stat-level         { color: #ffe27a; }
+.stat-abilityPoints { color: #ffc48a; }
+.stat-health        { color: #ffb3ba; }
+.stat-healthRegen   { color: #ffd1dc; }
+.stat-mana          { color: #a8d8ff; }
+.stat-manaRegen     { color: #c9e6ff; }
+.stat-damage        { color: #ffcf9e; }
+.stat-strength      { color: #e8c9a0; }
+.stat-critChance    { color: #a8f0c4; }
+.stat-critDamage    { color: #ffb0d0; }
+.stat-defence       { color: #9ff0e8; }
+
+/* ===== Centered pages (lobby, login, signup) ===== */
+.center-page {
+  flex: 1; /* fills whatever space is left under the banner and welcome bar */
+  display: flex;
+  flex-direction: column;
+  align-items: center;     /* horizontal centre */
+  justify-content: center; /* vertical centre */
+  gap: 1rem;
+}
+
+.center-page .box { margin: 0; text-align: center; }
+.center-page h2 { margin: 0 0 0.2rem; }
+
+.lobby { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
+.lobby-box, .auth-box { width: 340px; max-width: 100%; }
+
+/* ===== Action tab ===== */
+.action-grid {
+  display: flex;
+  flex-wrap: wrap;           /* columns drop to a new row on narrow screens */
+  justify-content: center;   /* the group of columns sits in the middle */
+  align-items: flex-start;
+  gap: 1rem;
+}
+.action-col { width: 200px; max-width: 100%; margin: 0; text-align: center; }
+.action-col h2 { font-size: 1.2rem; margin: 0 0 0.75rem; }
+.action-buttons { display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* ===== Tooltip ===== */
+.tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  visibility: hidden; /* Tooltip.tsx reveals it once it's positioned */
+  z-index: 900;
+  width: max-content;
+  max-width: 260px;
+  padding: 0.5rem 0.75rem;
+  background: var(--accent);   /* #a812e7 */
+  color: #fff;
+  border: 2px solid var(--border);   /* #7bcbf7 */
+  border-radius: var(--radius-button);
+  font-size: 0.9rem;
+  line-height: 1.4;
+  text-align: left;
+  pointer-events: none; /* never blocks the mouse */
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+/* ===== Popup ===== */
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(10, 0, 40, 0.6);
+}
+.popup {
+  width: 380px;
+  max-width: 100%;
   margin: 0;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
+.popup h2 { font-size: 1.2rem; margin: 0 0 0.6rem; }
+.popup-message { margin: 0 0 1rem; }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
+/* ===== Items ===== */
+.item-tip { display: flex; flex-direction: column; gap: 0.35rem; }
+.item-name { font-size: 1.05rem; font-weight: 700; }
+.item-rarity { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.item-stats { list-style: none; margin: 0; padding: 0; }
+.item-stat-up { color: #a8f0c4; }
+.item-stat-down { color: #ffc2cb; }
+.item-desc { margin: 0; font-style: italic; opacity: 0.9; white-space: pre-line; }
+.item-value { opacity: 0.85; }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
-}
+/* Rarity colours: the class is "rarity-<id>", matching the ids in items.ts.
+   PLACEHOLDERS: replace with yours. */
+.rarity-common    { color: #ffffff; }
+.rarity-uncommon  { color: #a8f5a2; }
+.rarity-rare      { color: #a8d8ff; }
+.rarity-epic      { color: #ff9cf2; }
+.rarity-legendary { color: #ffe27a; }
+.rarity-mythic    { color: #ff9ec4; }

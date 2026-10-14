@@ -7,6 +7,9 @@ import AuthForm from "./AuthForm";
 import RoomLobby from "./RoomLobby";
 import RoomView from "./RoomView";
 
+const BANNER = `${import.meta.env.BASE_URL}banner.png`;
+const LOGO = `${import.meta.env.BASE_URL}logo.png`;
+
 type PlayerData = { name: string | null; roomId: string | null };
 
 export default function App() {
@@ -27,16 +30,41 @@ export default function App() {
   }, [user]);
 
   if (user === undefined) return <p>Loading...</p>;
-  if (user === null) return <AuthForm />;
+
+  // Logged out: banner and login form, no welcome bar
+  if (user === null) {
+    return (
+      <div className="app">
+        <img className="banner" src={BANNER} alt="Balanced Game" />
+        <AuthForm />
+      </div>
+    );
+  }
+
   if (player === undefined) return <p>Loading...</p>;
 
+  const inRoom = Boolean(player.roomId);
+
   return (
-    <div>
-      <p>
-        Welcome, {player.name ?? "..."}! <button onClick={logOut}>Log out</button>
-      </p>
-      {player.roomId ? (
-        <RoomView uid={user.uid} roomId={player.roomId} />
+    <div className="app">
+      {/* Welcome bar: logo on the left (small banner in a room), user on the right */}
+      <div className="box topbar">
+        <img
+          className="topbar-img"
+          src={inRoom ? BANNER : LOGO}
+          alt={inRoom ? "Balanced Game" : "Balanced Game logo"}
+        />
+        <div className="topbar-user">
+          <span>Welcome, {player.name ?? "..."}!</span>
+          <button onClick={logOut}>Log out</button>
+        </div>
+      </div>
+
+      {/* Big banner on every page except inside a room */}
+      {!inRoom && <img className="banner" src={BANNER} alt="Balanced Game" />}
+
+      {inRoom ? (
+        <RoomView uid={user.uid} roomId={player.roomId!} />
       ) : (
         <RoomLobby uid={user.uid} />
       )}

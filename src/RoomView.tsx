@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { ROOM_MODES, leaveRoom, subscribeToRoom, type Room } from "./rooms";
 import GameClock from "./GameClock";
+import StatsTab from "./StatsTab";
+import ActionTab from "./ActionTab";
+import ChangelogTab from "./ChangelogTab";
 
 const TABS = [
   { id: "stats", label: "Stats" },
@@ -21,7 +24,7 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
   if (room === undefined) return <p>Loading room...</p>;
   if (room === null) {
     return (
-      <div>
+      <div className="box">
         <p>This room no longer exists.</p>
         <button onClick={() => leaveRoom(uid)}>Back to lobby</button>
       </div>
@@ -38,55 +41,54 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
 
   return (
     <div>
-      {/* Header: always visible, whichever tab is open */}
-      <header>
-        <h2>{room.name}</h2>
-        <p>
-          Room code:{" "}
-          <strong style={{ fontFamily: "monospace", fontSize: "1.2em" }}>{room.id}</strong>{" "}
-          <button onClick={copyCode}>{copied ? "Copied!" : "Copy"}</button>
-        </p>
-        <p>
-          {modeLabel} mode - {Object.keys(room.members).length}/{room.maxPlayers} players
-        </p>
-        <GameClock room={room} />
-        <p>
-          <button onClick={() => leaveRoom(uid)}>Leave room</button>
-        </p>
-      </header>
+      {/* Info boxes: always visible, whichever tab is open */}
+      <div className="info-row">
+        <section className="box info-box">
+          <h2>Room info</h2>
+          <ul className="info-list">
+            <li>Name: {room.name}</li>
+            <li>
+              Code: <strong className="room-code">{room.id}</strong>{" "}
+              <button onClick={copyCode}>{copied ? "Copied!" : "Copy"}</button>
+            </li>
+            <li>Type: {modeLabel}</li>
+            <li>
+              Players: {Object.keys(room.members).length}/{room.maxPlayers}
+            </li>
+          </ul>
+        </section>
+
+        <section className="box info-box">
+          <h2>Game info</h2>
+          <GameClock room={room} />
+        </section>
+      </div>
+
+      <div className="center-row">
+        <button onClick={() => leaveRoom(uid)}>Leave room</button>
+      </div>
 
       {/* Navbar */}
-      <nav
-        role="tablist"
-        style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid currentColor" }}
-      >
+      <nav className="tabs" role="tablist">
         {TABS.map((t) => (
           <button
             key={t.id}
+            className="tab"
             role="tab"
             aria-selected={tab === t.id}
             onClick={() => setTab(t.id)}
-            style={{
-              background: "none",
-              border: "none",
-              borderBottom: tab === t.id ? "3px solid currentColor" : "3px solid transparent",
-              fontWeight: tab === t.id ? "bold" : "normal",
-              opacity: tab === t.id ? 1 : 0.6,
-              padding: "0.5rem 1rem",
-              cursor: "pointer",
-            }}
           >
             {t.label}
           </button>
         ))}
       </nav>
 
-      {/* Tab content (all empty for now) */}
-      <main role="tabpanel" style={{ minHeight: "12rem", paddingTop: "1rem" }}>
-        {tab === "stats" && null}
-        {tab === "action" && null}
+      {/* Tab content */}
+      <main role="tabpanel">
+        {tab === "stats" && <StatsTab roomId={roomId} uid={uid} />}
+        {tab === "action" && <ActionTab room={room} uid={uid} />}
         {tab === "log" && null}
-        {tab === "changelog" && null}
+        {tab === "changelog" && <ChangelogTab />}
       </main>
     </div>
   );

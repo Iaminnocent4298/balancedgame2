@@ -17,13 +17,20 @@ export default function GameClock({ room }: { room: Room }) {
   const t = getGameTime(room.mode, startedAt, now);
 
   return (
-    <div>
-      <div style={{ fontFamily: "monospace", fontSize: "2em" }}>
-        {pad(t.hour)}:{pad(t.minute)}
-      </div>
-      <div>
-        {t.month}, Year {t.year}
-      </div>
-    </div>
+    <ul className="info-list">
+      <li>
+        Time:{" "}
+        <span className="clock">
+          {pad(t.hour)}:{pad(t.minute)}
+        </span>
+      </li>
+      <li>
+        Month: <span className={`season-${t.season.toLowerCase()}`}>{t.month}</span>
+      </li>
+      <li>Season: {t.season}</li>
+      <li>
+        Year: <span className="year">{t.year}</span>
+      </li>
+    </ul>
   );
 }

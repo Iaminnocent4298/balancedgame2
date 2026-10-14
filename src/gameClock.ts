@@ -17,6 +17,7 @@ export type GameTime = {
   hour: number; // 0-23
   minute: number; // 0-59
   month: string; // e.g. "Early Winter"
+  season: (typeof SEASONS)[number]; // "Winter" | "Spring" | "Summer" | "Fall"
   year: number; // starts at 1
 };
 
@@ -30,10 +31,13 @@ export function getGameTime(mode: RoomMode, startedAtMs: number, nowMs: number):
 
   const monthIndex = dayIndex % MONTHS_PER_YEAR; // each day = next "month"
 
+  const season = SEASONS[Math.floor(monthIndex / 3)];
+
   return {
     hour: Math.floor(minutesIntoDay / 60),
     minute: minutesIntoDay % 60,
-    month: `${PARTS[monthIndex % 3]} ${SEASONS[Math.floor(monthIndex / 3)]}`,
+    month: `${PARTS[monthIndex % 3]} ${season}`,
+    season,
     year: Math.floor(dayIndex / MONTHS_PER_YEAR) + 1,
   };
 }
