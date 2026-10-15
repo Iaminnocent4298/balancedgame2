@@ -52,6 +52,7 @@ export const ITEMS = defineItems([
     id: "fireball", name: "Fireball", type: "damage_spell",
     rarity: "uncommon", value: 75, levelReq: 5,
     description: "Hurls a ball of fire at one target.",
+    stats: { damage: 8 },
   },
   {
     id: "meteor_shower", name: "Meteor Shower", type: "aoe_spell",
@@ -104,6 +105,7 @@ export const ITEMS = defineItems([
     id: "damage_spell_base", name: "Crude Damage Spell", type: "damage_spell",
     rarity: "common", value: 20,
     description: "A weak spark aimed at a single target.",
+    stats: { damage: 2 },
   },
   {
     id: "aoe_spell_base", name: "Crude AOE Spell", type: "aoe_spell",
@@ -114,5 +116,43 @@ export const ITEMS = defineItems([
     id: "ultimate_spell_base", name: "Crude Ultimate Spell", type: "ultimate_spell",
     rarity: "common", value: 50,
     description: "An ultimate in name only.",
+  },
+
+    // ----- Limited item bases (sold in the Limited! shop) -----
+  {
+    id: "tempered_blade", name: "Tempered Blade", type: "weapon",
+    rarity: "rare", value: 90, enhancementSlots: 4,
+    description: "A proper blade, folded and quenched.",
+    stats: { damage: 4, strength: 1 },
+    levelReq: 3,
+  },
+  {
+    id: "warden_helm", name: "Warden's Helm", type: "helmet",
+    rarity: "rare", value: 80, enhancementSlots: 4,
+    stats: { defence: 3, maxHealth: 10 },
+    levelReq: 4,
+  },
+  {
+    id: "warden_plate", name: "Warden's Plate", type: "chestplate",
+    rarity: "rare", value: 110, enhancementSlots: 4,
+    stats: { defence: 5, maxHealth: 20 },
+    levelReq: 5,
+  },
+  {
+    id: "warden_boots", name: "Warden's Boots", type: "boots",
+    rarity: "rare", value: 80, enhancementSlots: 4,
+    stats: { defence: 3, maxHealth: 8 },
+    levelReq: 4,
+  },
+  {
+    id: "greater_heal", name: "Greater Heal", type: "healing_spell",
+    rarity: "rare", value: 100, enhancementSlots: 4,
+    description: "A steady, reliable mending.",
+  },
+  {
+    id: "arc_bolt", name: "Arc Bolt", type: "damage_spell",
+    rarity: "rare", value: 100, enhancementSlots: 4,
+    description: "Lightning, aimed.",
+    stats: { damage: 10 },
   },
 ]);

@@ -1,24 +1,34 @@
 import { useEffect, useState } from "react";
 import type { Room } from "./rooms";
-import type { ItemTypeId } from "./items";
+import { ATTACK_SLOTS, GEAR_SLOTS, SPELL_SLOTS, type ItemTypeId } from "./items";
+import { ITEMS } from "./itemCatalog";
 import { subscribeToLoadout, type Loadout } from "./equipment";
+import { AttackError, performAttack, type AttackFailure } from "./attack";
 import EquipmentMenu from "./EquipmentMenu";
+import ItemTooltip from "./ItemTooltip";
 import PointsMenu from "./PointsMenu";
 import ShopMenu from "./ShopMenu";
 import { SHOPS, type ShopId } from "./shopCatalog";
+import { usePopup } from "./usePopup";
 
 type MenuId = "gear" | "spells";
 type View = "main" | "points" | MenuId | ShopId;
 
 const isShop = (v: View): v is ShopId => v in SHOPS;
 
+const ATTACK_FAILURE_TITLES: Record<AttackFailure, string> = {
+  no_item: "Nothing to attack with",
+  target_gone: "Target not found",
+  target_down: "Target is down",
+  attacker_dead: "You're dead",
+  not_started: "Game not started",
+  invalid: "Can't attack",
+};
+
 // Each menu: its title and which slots (item types) get a card, left to right
 const MENUS: Record<MenuId, { title: string; slots: ItemTypeId[] }> = {
-  gear: { title: "Gear", slots: ["weapon", "helmet", "chestplate", "leggings", "boots"] },
-  spells: {
-    title: "Spells",
-    slots: ["healing_spell", "damage_spell", "aoe_spell", "ultimate_spell"],
-  },
+  gear: { title: "Gear", slots: GEAR_SLOTS },
+  spells: { title: "Spells", slots: SPELL_SLOTS },
 };
 
 // Static columns. A button with a "view" opens that menu; the rest do nothing yet.
@@ -36,23 +46,87 @@ const COLUMNS: { title: string; buttons: { label: string; view?: View }[] }[] = 
     buttons: [
       { label: "Item bases", view: "itemBases" },
       { label: "Enhancements", view: "enhancements" },
-      { label: "Limited!" },
+      { label: "Limited!", view: "limited" },
     ],
   },
   { title: "Points", buttons: [{ label: "Modify", view: "points" }] },
 ];
 
-export default function ActionTab({ room, uid }: { room: Room; uid: string }) {
+export default function ActionTab({
+  room, uid, deadIds,
+}: { room: Room; uid: string; deadIds: Set<string> }) {
+  const { showPopup, choosePopup } = usePopup();
   const [view, setView] = useState<View>("main");
   // undefined = still loading
   const [loadout, setLoadout] = useState<Loadout | undefined>(undefined);
+  const [attacking, setAttacking] = useState(false);
 
   useEffect(() => subscribeToLoadout(uid, setLoadout), [uid]);
+
+  async function handleAttack(targetId: string, targetName: string) {
+    if (!loadout) return;
+
+    // 0) What the player can attack with: equipped weapon and damage spells
+    const options = ATTACK_SLOTS.flatMap((slot) => {
+      const itemId = loadout.equipment[slot];
+      const item = itemId ? ITEMS[itemId] : undefined;
+      return item && item.type === slot
+        ? [{ slot, item, applied: loadout.enhancements[slot] ?? [] }]
+        : [];
+    });
+
+    if (options.length === 0) {
+      showPopup({
+        title: "Nothing to attack with",
+        message: "Equip a weapon or a damage spell first. You can buy item bases in the shop.",
+      });
+      return;
+    }
+
+    const chosen = await choosePopup<ItemTypeId>({
+      title: `Attack ${targetId === uid ? "yourself" : targetName}`,
+      message: "Pick what to attack with.",
+      groups: [
+        {
+          choices: options.map(({ slot, item, applied }) => ({
+            value: slot,
+            buttonLabel: "Attack",
+            label: <ItemTooltip item={item} enhancements={applied} />,
+          })),
+        },
+      ],
+    });
+    if (!chosen) return; // cancelled
+
+    setAttacking(true);
+    try {
+      const r = await performAttack(uid, targetId, chosen);
+
+      if (r.levelsGained > 0) {
+        const n = r.levelsGained;
+        showPopup({
+          title: "Level up!",
+          message:
+            `You levelled up ${n} ${n === 1 ? "time" : "times"} and gained ` +
+            `${r.apGained} ability ${r.apGained === 1 ? "point" : "points"}.`,
+        });
+      }
+    } catch (err) {
+      if (err instanceof AttackError) {
+        showPopup({ title: ATTACK_FAILURE_TITLES[err.reason], message: err.message });
+      } else {
+        console.error(err);
+        showPopup({ title: "Attack failed", message: "Something went wrong. Please try again." });
+      }
+    } finally {
+      setAttacking(false);
+    }
+  }
 
   if (view === "points") return <PointsMenu uid={uid} onBack={() => setView("main")} />;
 
   if (isShop(view)) {
-    return <ShopMenu shopId={view} uid={uid} onBack={() => setView("main")} />;
+    return <ShopMenu shopId={view} room={room} uid={uid} onBack={() => setView("main")} />;
   }
 
   if (view !== "main") {
@@ -80,12 +154,20 @@ export default function ActionTab({ room, uid }: { room: Room; uid: string }) {
       <section className="box action-col">
         <h2>Attack</h2>
         <div className="action-buttons">
-          {players.map(([id, name]) => (
-            <button key={id}>
-              {name}
-              {id === uid && " (you)"}
-            </button>
-          ))}
+          {players.map(([id, name]) => {
+            const down = deadIds.has(id);
+            return (
+              <button
+                key={id}
+                disabled={attacking || !loadout || down}
+                onClick={() => handleAttack(id, name)}
+              >
+                {name}
+                {id === uid && " (you)"}
+                {down && " (dead)"}
+              </button>
+            );
+          })}
         </div>
       </section>
 

@@ -74,12 +74,6 @@ export const STATS: StatDef[] = [
     display: (s) => `${n(s.manaRegenRaw)} + ${n(s.manaRegenPercent)}%`,
   },
   {
-    id: "damage", icon: "🗡", label: "Damage",
-    perPoint: { damage: 1 },
-    fields: { damage: 1 },
-    display: (s) => n(s.damage),
-  },
-  {
     id: "strength", icon: "✤", label: "Strength",
     perPoint: { strength: 1 },
     fields: { strength: 0 },
@@ -134,11 +128,30 @@ for (const def of STATS) {
   }
 }
 
+// ===== Item-only stats =====
+// These exist ONLY on items and enhancements, not on players. They apply when that
+// item is used: a weapon's damage applies to attacks made with that weapon.
+export type ItemStatDef = { id: string; icon: string; label: string; suffix?: string };
+
+export const ITEM_STATS: ItemStatDef[] = [
+  { id: "damage", icon: "🗡", label: "Damage" },
+];
+
+for (const s of ITEM_STATS) {
+  if (s.id in DEFAULT_STATS) throw new Error(`Item stat "${s.id}" clashes with a player stat`);
+}
+
+// Everything an item or enhancement is allowed to modify
+export const ITEM_MODIFIABLE_FIELDS = [...COMPOSITE_FIELDS, ...ITEM_STATS.map((s) => s.id)];
+
 // Fills in defaults for any field a player doesn't have yet, so adding
 // a new stat later never breaks players who are already in a room.
 export function withDefaults(stats: Stats | null | undefined): Stats {
   return { ...DEFAULT_STATS, ...(stats ?? {}) };
 }
+
+// A player at 0 health or below is dead and can only spectate
+export const isDead = (stats: Stats | null | undefined) => withDefaults(stats).health <= 0;
 
 function prettify(key: string): string {
   return key.replace(/([A-Z])/g, " $1").replace(/^./, (c) => c.toUpperCase());
@@ -157,6 +170,10 @@ export function describeField(key: string): {
       suffix: info?.suffix ?? "",
       statId: def.id,
     };
+  }
+  const itemStat = ITEM_STATS.find((s) => s.id === key);
+  if (itemStat) {
+    return { icon: itemStat.icon, label: itemStat.label, suffix: itemStat.suffix ?? "", statId: "" };
   }
   return { icon: "", label: prettify(key), suffix: "", statId: "" };
 }

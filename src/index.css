@@ -184,7 +184,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .stat-healthRegen   { color: #ffd1dc; }
 .stat-mana          { color: #a8d8ff; }
 .stat-manaRegen     { color: #c9e6ff; }
-.stat-damage        { color: #ffcf9e; }
 .stat-strength      { color: #e8c9a0; }
 .stat-critChance    { color: #a8f0c4; }
 .stat-critDamage    { color: #ffb0d0; }
@@ -217,6 +216,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .action-col { width: 200px; max-width: 100%; margin: 0; text-align: center; }
 .action-col h2 { font-size: 1.2rem; margin: 0 0 0.75rem; }
 .action-buttons { display: flex; flex-direction: column; gap: 0.5rem; }
+.last-attack { margin: 0.75rem 0 0; font-size: 0.85rem; opacity: 0.9; }
 
 /* ===== Tooltip ===== */
 .tooltip {
@@ -323,10 +323,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .points-section { max-width: 100%; }
 .points-section h3 { margin: 0 0 0.5rem; text-align: center; }
 
-/* ===== Shop ===== */
-.balance { width: fit-content; margin: 0 auto 1rem; text-align: center; }
-.balance strong { font-size: 1.3em; }
-
 /* ===== Enhancements (item tooltip) ===== */
 .item-enh {
   display: flex;
@@ -341,15 +337,70 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 /* ===== Choice popup ===== */
 .popup { max-height: calc(100vh - 2rem); overflow-y: auto; }
-.popup-wide { width: 460px; }
-.popup-choices {
+.popup-wide { width: min(1120px, 100%); }
+
+.popup-groups { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1rem; }
+.popup-group h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+.popup-row {
+  display: flex;
+  flex-wrap: wrap;           /* cards wrap onto more lines on narrow screens */
+  justify-content: center;
+  align-items: stretch;
+  gap: 0.75rem;
+}
+
+.choice-card {
+  width: 200px;
+  max-width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  justify-content: space-between; /* "Apply here" buttons line up along the bottom */
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-button);
+  cursor: pointer;
+  text-align: center;
+}
+.choice-card:hover:not(.choice-card-disabled) { background: rgba(255, 255, 255, 0.12); }
+.choice-card-disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ===== Rotating shop ===== */
+.shop-info {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
   margin-bottom: 1rem;
 }
-.popup-choices .choice { width: 100%; text-align: left; padding: 0.6rem 0.9rem; }
-.choice-line { display: block; }
-.choice-name { font-weight: 700; }
-.choice-sub { font-size: 0.85rem; opacity: 0.85; }
-.choice-desc { font-size: 0.85rem; font-style: italic; opacity: 0.85; margin-top: 0.2rem; }
+.shop-info .box { margin: 0; text-align: center; }
+.shop-info strong { font-size: 1.3em; font-variant-numeric: tabular-nums; }
+.row-tag { display: block; font-size: 0.75rem; opacity: 0.75; }
+.row-level { display: block; font-size: 0.75rem; }
+.row-level-locked { color: #ffc2cb; font-weight: 700; } /* shown when your level is too low */
+
+/* ===== Log ===== */
+.log-bar { display: flex; justify-content: center; margin-bottom: 1rem; }
+.log-box { max-width: 820px; margin: 0 auto; }
+.log-list { list-style: none; margin: 0; padding: 0; line-height: 1.8; text-align: left; }
+.log-empty { margin: 0; text-align: center; font-style: italic; opacity: 0.8; }
+.log-time {
+  color: var(--border);          /* same blue as the borders */
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.5rem;
+}
+
+/* ===== Waiting room and spectating ===== */
+.waiting { max-width: 520px; margin: 0 auto 1rem; text-align: center; }
+.waiting h2 { font-size: 1.2rem; }
+.waiting-text { font-style: italic; }
+.dead-banner { background: #7a1030; text-align: center; font-weight: 700; }
+.dead-note { text-align: center; font-style: italic; }
+.log-death { font-weight: 700; color: #ffc2cb; }

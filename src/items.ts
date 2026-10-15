@@ -1,4 +1,4 @@
-import { COMPOSITE_FIELDS } from "./stats";
+import { ITEM_MODIFIABLE_FIELDS } from "./stats";
 
 // ===== Rarities: ordered lowest to highest. Add or rename here. =====
 export const RARITIES = [
@@ -29,6 +29,25 @@ export const ITEM_TYPES = [
 export type ItemTypeId = (typeof ITEM_TYPES)[number]["id"];
 
 export const getItemType = (id: ItemTypeId) => ITEM_TYPES.find((t) => t.id === id)!;
+
+export const GEAR_SLOTS: ItemTypeId[] = ["weapon", "helmet", "chestplate", "leggings", "boots"];
+// Slots a player can attack with. Healing never attacks. AOE and ultimate spells are
+// left out until their targeting and mana rules are designed. Add them here when ready.
+export const ATTACK_SLOTS: ItemTypeId[] = ["weapon", "damage_spell"];
+
+// The word used in the log: "<attacker> bonked <victim> for ... damage"
+export const ATTACK_VERBS: Partial<Record<ItemTypeId, string>> = {
+  weapon: "bonked",
+  damage_spell: "spelled",
+};
+for (const slot of ATTACK_SLOTS) {
+  if (!ATTACK_VERBS[slot]) throw new Error(`Attack slot "${slot}" needs a verb in ATTACK_VERBS`);
+}
+
+export const ARMOUR_SLOTS: ItemTypeId[] = ["helmet", "chestplate", "leggings", "boots"];
+export const SPELL_SLOTS: ItemTypeId[] = [
+  "healing_spell", "damage_spell", "aoe_spell", "ultimate_spell",
+];
 
 // ===== The item type. New attributes go here (make them optional). =====
 // Keys are stored stat field names from stats.ts, e.g. { damage: 5, maxHealth: 50 }.
@@ -66,7 +85,7 @@ export function defineItems(list: Item[]): Record<string, Item> {
       throw new Error(`Item "${item.id}" has an invalid enhancementSlots`);
     }
     for (const key of Object.keys(item.stats ?? {})) {
-      if (!COMPOSITE_FIELDS.includes(key)) {
+      if (!ITEM_MODIFIABLE_FIELDS.includes(key)) {
         throw new Error(`Item "${item.id}" can't modify "${key}" (unknown or not modifiable)`);
       }
     }

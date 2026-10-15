@@ -123,26 +123,35 @@ export default function PopupProvider({ children }: { children: ReactNode }) {
             )}
 
             {active.kind === "choice" && (
-              <div className="popup-choices">
-                {active.options.choices.map((choice, i) => {
-                  // aria-disabled (not "disabled") so hover tooltips still work on greyed-out choices
-                  const button = (
-                    <button
-                      className="choice"
-                      aria-disabled={choice.disabled || undefined}
-                      onClick={() => {
-                        if (!choice.disabled) finish(() => active.resolve(choice.value));
-                      }}
-                    >
-                      {choice.label}
-                    </button>
-                  );
-                  return choice.tooltip ? (
-                    <Tooltip key={i} content={choice.tooltip}>{button}</Tooltip>
-                  ) : (
-                    <Fragment key={i}>{button}</Fragment>
-                  );
-                })}
+              <div className="popup-groups">
+                {active.options.groups.map((group, g) => (
+                  <div key={g} className="popup-group">
+                    {group.title && <h3>{group.title}</h3>}
+                    <div className="popup-row">
+                      {group.choices.map((choice, i) => {
+                        const pick = () => {
+                          if (!choice.disabled) finish(() => active.resolve(choice.value));
+                        };
+                        const card = (
+                          <div
+                            className={`choice-card${choice.disabled ? " choice-card-disabled" : ""}`}
+                            onClick={pick}
+                          >
+                            {choice.label}
+                            <button className="choice-pick" disabled={choice.disabled}>
+                              {choice.buttonLabel ?? "Choose"}
+                            </button>
+                          </div>
+                        );
+                        return choice.tooltip ? (
+                          <Tooltip key={i} content={choice.tooltip}>{card}</Tooltip>
+                        ) : (
+                          <Fragment key={i}>{card}</Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 

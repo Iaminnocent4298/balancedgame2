@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { STATS } from "./stats";
+import { isDead, STATS } from "./stats";
 import { subscribeToRoomPlayers, type RoomPlayer } from "./rooms";
 import Tooltip from "./Tooltip";
 import { getDisplayStats } from "./statCalc";
@@ -27,6 +27,7 @@ export default function StatsTab({ roomId, uid }: { roomId: string; uid: string 
               <th key={p.id}>
                 {p.name}
                 {p.id === uid && " (you)"}
+                {isDead(p.stats) && " (dead)"}
               </th>
             ))}
           </tr>

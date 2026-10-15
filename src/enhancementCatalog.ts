@@ -13,4 +13,18 @@ export const ENHANCEMENTS = defineEnhancements([
     stats: { critChance: 1, critDamage: 5 } },
   { id: "empower", name: "Empower", rarity: "rare", value: 80,
     description: "Raw power, bottled.", stats: { strength: 3 } },
+
+  // ----- Limited enhancements (sold in the Limited! shop) -----
+  { id: "razor_edge", name: "Razor Edge", rarity: "epic", value: 150,
+    description: "Sharp enough to cut a thought in half.", stats: { damage: 5 } },
+  { id: "bulwark", name: "Bulwark", rarity: "epic", value: 150,
+    stats: { defence: 5 } },
+  { id: "titan_heart", name: "Titan's Heart", rarity: "epic", value: 180,
+    stats: { maxHealth: 40 } },
+  { id: "deep_wellspring", name: "Deep Wellspring", rarity: "epic", value: 180,
+    stats: { maxMana: 40 } },
+  { id: "deadeye", name: "Deadeye", rarity: "legendary", value: 300,
+    description: "Never misses a weak point.", stats: { critChance: 3, critDamage: 15 } },
+  { id: "berserkers_rage", name: "Berserker's Rage", rarity: "legendary", value: 300,
+    description: "Power, at the cost of caution.", stats: { strength: 6, damage: 3, defence: -2 } },
 ]);

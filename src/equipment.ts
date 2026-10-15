@@ -11,13 +11,19 @@ export type Equipment = Partial<Record<ItemTypeId, string>>;
 // slot -> enhancement ids applied to the item in that slot, e.g. { weapon: ["sharpness"] }
 export type Enhancements = Partial<Record<ItemTypeId, string[]>>;
 
-export type Loadout = { equipment: Equipment; enhancements: Enhancements; coins: number };
+export type Loadout = {
+  equipment: Equipment;
+  enhancements: Enhancements;
+  coins: number;
+  level: number;
+};
 
 function toLoadout(data: DocumentData | undefined): Loadout {
   return {
     equipment: (data?.equipment as Equipment | undefined) ?? {},
     enhancements: (data?.enhancements as Enhancements | undefined) ?? {},
     coins: (data?.stats?.coins as number | undefined) ?? DEFAULT_STATS.coins,
+    level: (data?.stats?.level as number | undefined) ?? DEFAULT_STATS.level,
   };
 }
 

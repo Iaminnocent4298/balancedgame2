@@ -1,4 +1,4 @@
-import { doc, onSnapshot, runTransaction } from "firebase/firestore";
+import { doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 import { ITEMS } from "./itemCatalog";
 import { ENHANCEMENTS } from "./enhancementCatalog";
@@ -11,6 +11,7 @@ export type PurchaseFailure =
   | "already_owned"
   | "slots_full"
   | "nothing_to_enhance"
+  | "level_too_low"
   | "invalid";
 
 // Thrown for problems the player should be told about
@@ -22,10 +23,13 @@ export class PurchaseError extends Error {
   }
 }
 
-export function subscribeToCoins(uid: string, onChange: (coins: number) => void) {
-  return onSnapshot(doc(db, "players", uid), (snap) =>
-    onChange((snap.data()?.stats?.coins as number | undefined) ?? DEFAULT_STATS.coins)
-  );
+function checkLevel(name: string, required: number | undefined, level: number) {
+  if (required !== undefined && level < required) {
+    throw new PurchaseError(
+      "level_too_low",
+      `${name} requires level ${required}, but you're level ${level}.`
+    );
+  }
 }
 
 // Checks everything, then takes the coins and fills the slot in one step,
@@ -41,8 +45,10 @@ export async function purchaseItem(uid: string, itemId: string, price: number): 
   await runTransaction(db, async (tx) => {
     const data = (await tx.get(playerRef)).data();
     const coins = (data?.stats?.coins as number | undefined) ?? DEFAULT_STATS.coins;
+    const level = (data?.stats?.level as number | undefined) ?? DEFAULT_STATS.level;
     const equipment = (data?.equipment as Equipment | undefined) ?? {};
 
+    checkLevel(item.name, item.levelReq, level);
     if (equipment[slot]) {
       throw new PurchaseError(
         "already_owned",
@@ -78,6 +84,9 @@ export async function purchaseEnhancement(
   await runTransaction(db, async (tx) => {
     const data = (await tx.get(playerRef)).data();
     const coins = (data?.stats?.coins as number | undefined) ?? DEFAULT_STATS.coins;
+    const level = (data?.stats?.level as number | undefined) ?? DEFAULT_STATS.level;
+
+    checkLevel(enhancement.name, enhancement.levelReq, level);
 
     const itemId = (data?.equipment as Equipment | undefined)?.[slot];
     const item = itemId ? ITEMS[itemId] : undefined;

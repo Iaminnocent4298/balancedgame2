@@ -14,16 +14,22 @@ export type ConfirmOptions = {
 };
 
 export type Choice<T> = {
-  value: T; // what choosePopup resolves with when this is clicked
-  label: ReactNode; // what the button shows
-  tooltip?: ReactNode; // shown on hover
+  value: T; // what choosePopup resolves with when this is picked
+  label: ReactNode; // the card's content
+  buttonLabel?: string; // the card's button text. Defaults to "Choose"
+  tooltip?: ReactNode; // optional hover tooltip
   disabled?: boolean; // greyed out and can't be picked
+};
+
+export type ChoiceGroup<T> = {
+  title?: string; // heading above this row
+  choices: Choice<T>[]; // laid out side by side (wrapping on narrow screens)
 };
 
 export type ChoiceOptions<T> = {
   title?: string;
   message?: ReactNode;
-  choices: Choice<T>[];
+  groups: ChoiceGroup<T>[]; // one row each, top to bottom
   cancelLabel?: string; // defaults to "Cancel"
 };
 

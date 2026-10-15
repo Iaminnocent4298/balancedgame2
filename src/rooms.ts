@@ -5,6 +5,7 @@ import {
 import { db } from "./firebase";
 import { DEFAULT_STATS, type Stats } from "./stats";
 import type { Enhancements, Equipment } from "./equipment";
+import type { LogEntry } from "./log";
 
 export const ROOM_MODES = [
   { id: "speed", label: "Speed" },
@@ -28,7 +29,16 @@ export type Room = {
   hostId: string;
   members: Record<string, string>; // uid -> display name
   createdAt: Timestamp | null;
+  log?: LogEntry[]; // newest first, at most 50
+  startedAt?: Timestamp | null; // null until the host starts the game
 };
+
+// When the game started, or null if it hasn't yet.
+// Rooms made before this feature have no startedAt, so they count as started at creation.
+export function getStartMs(room: Room): number | null {
+  if (room.startedAt === undefined) return room.createdAt?.toMillis() ?? Date.now();
+  return room.startedAt ? room.startedAt.toMillis() : null;
+}
 
 class CodeTakenError extends Error {}
 
@@ -84,6 +94,7 @@ export async function createRoom(
           hostId: uid,
           members: { [uid]: player.data()?.name ?? "Player" },
           createdAt: serverTimestamp(),
+          startedAt: null,
         });
         tx.update(playerRef, {
           roomId: code, stats: { ...DEFAULT_STATS }, points: {}, equipment: {}, enhancements: {},
@@ -113,6 +124,9 @@ export async function joinRoom(uid: string, rawCode: string) {
 
     if (player.data()?.roomId) throw new Error("You're already in a room.");
     if (!room.exists()) throw new Error("No room found with that code.");
+    if (room.data().startedAt !== null) {
+      throw new Error("That game has already started, so it can't be joined.");
+    }
     if (Object.keys(room.data().members).length >= room.data().maxPlayers) {
       throw new Error("That room is full.");
     }
@@ -194,4 +208,20 @@ export function subscribeToRoomPlayers(
       }))
     )
   );
+}
+
+// Only the host can start, and only once
+export async function startGame(uid: string, roomId: string) {
+  const roomRef = doc(db, "rooms", roomId);
+
+  await runTransaction(db, async (tx) => {
+    const room = await tx.get(roomRef);
+    if (!room.exists()) throw new Error("This room no longer exists.");
+
+    const data = room.data();
+    if (data.hostId !== uid) throw new Error("Only the host can start the game.");
+    if (data.startedAt !== null) throw new Error("The game has already started.");
+
+    tx.update(roomRef, { startedAt: serverTimestamp() });
+  });
 }
