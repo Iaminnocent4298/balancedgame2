@@ -74,8 +74,8 @@ button {
   padding: 0.4rem 0.9rem;
   cursor: pointer;
 }
-button:hover:not(:disabled) { background: var(--accent-hover); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+button:hover:not(:disabled):not([aria-disabled="true"]) { background: var(--accent-hover); }
+button:disabled, button[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; }
 
 /* ===== Inputs ===== */
 input, select {
@@ -179,6 +179,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    To colour only the stat's name, use ".stat-health th" instead. */
 .stat-level         { color: #ffe27a; }
 .stat-abilityPoints { color: #ffc48a; }
+.stat-coins         { color: #ffd34d; }
 .stat-health        { color: #ffb3ba; }
 .stat-healthRegen   { color: #ffd1dc; }
 .stat-mana          { color: #a8d8ff; }
@@ -258,6 +259,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 .popup h2 { font-size: 1.2rem; margin: 0 0 0.6rem; }
 .popup-message { margin: 0 0 1rem; }
+.popup-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; }
 
 /* ===== Items ===== */
 .item-tip { display: flex; flex-direction: column; gap: 0.35rem; }
@@ -277,3 +279,77 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .rarity-epic      { color: #ff9cf2; }
 .rarity-legendary { color: #ffe27a; }
 .rarity-mythic    { color: #ff9ec4; }
+
+/* ===== Equipment menus (weapon, armour, spells) ===== */
+.menu-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.menu-head h2 { margin: 0; }
+
+.equip-row {
+  display: flex;
+  flex-wrap: wrap;           /* cards wrap onto a new row on narrow screens */
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.equip-card { width: 220px; max-width: 100%; margin: 0; text-align: center; }
+.equip-card h3 {
+  margin: 0 0 0.6rem;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+.equip-empty { margin: 0; font-style: italic; opacity: 0.7; }
+.equip-card .salvage { margin-top: 0.75rem; }
+
+/* ===== Points menu ===== */
+.points-ap { width: fit-content; margin: 0 auto 1rem; text-align: center; }
+.points-ap strong { font-size: 1.3em; }
+.points-controls { display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+.points-controls button { padding: 0.25rem 0.6rem; min-width: 2.6rem; }
+.points-value {
+  min-width: 3ch;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.points-layout {
+  display: flex;
+  flex-wrap: wrap;           /* the stats table drops below on narrow screens */
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+.points-section { max-width: 100%; }
+.points-section h3 { margin: 0 0 0.5rem; text-align: center; }
+
+/* ===== Shop ===== */
+.balance { width: fit-content; margin: 0 auto 1rem; text-align: center; }
+.balance strong { font-size: 1.3em; }
+
+/* ===== Enhancements (item tooltip) ===== */
+.item-enh {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.35rem;
+}
+.item-enh-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+.item-enh-empty { font-style: italic; opacity: 0.7; }
+.item-enh .item-stats { padding-left: 0.75rem; }
+
+/* ===== Choice popup ===== */
+.popup { max-height: calc(100vh - 2rem); overflow-y: auto; }
+.popup-wide { width: 460px; }
+.popup-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.popup-choices .choice { width: 100%; text-align: left; padding: 0.6rem 0.9rem; }
+.choice-line { display: block; }
+.choice-name { font-weight: 700; }
+.choice-sub { font-size: 0.85rem; opacity: 0.85; }
+.choice-desc { font-size: 0.85rem; font-style: italic; opacity: 0.85; margin-top: 0.2rem; }

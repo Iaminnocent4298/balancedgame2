@@ -6,7 +6,9 @@ export type StatDef = {
   icon: string;
   label: string;
   description?: string;
-  fieldInfo?: Record<string, { label?: string; suffix?: string }>; // per-field name/unit overrides
+  fieldInfo?: Record<string, { label?: string; suffix?: string }>;
+  plain?: string[];
+  perPoint?: Record<string, number>; // fields that can take ability points: stat gained per 1 AP
   fields: Stats;
   display: (s: Stats) => string;
 };
@@ -18,22 +20,34 @@ export const STATS: StatDef[] = [
   {
     id: "level", icon: "✷", label: "Level",
     description: "test",
+    plain: ["level", "levelXp", "nextLevelXp"],
     fields: { level: 1, levelXp: 0, nextLevelXp: 100 },
     display: (s) => `${n(s.level)} [${n(s.levelXp)}/${n(s.nextLevelXp)}]`,
   },
   {
     id: "abilityPoints", icon: "✹", label: "Ability Points",
+    plain: ["abilityPoints"],
     fields: { abilityPoints: 0 },
     display: (s) => n(s.abilityPoints),
   },
   {
+    id: "coins", icon: "$", label: "Coins",
+    description: "Currency used to buy items. Earned by salvaging equipment.",
+    plain: ["coins"],   // a plain value: not split into base/points/equipment
+    fields: { coins: 0 },
+    display: (s) => n(s.coins),
+  },
+  {
     id: "health", icon: "❤", label: "Health",
+    plain: ["health"],
+    perPoint: { maxHealth: 5 },
     fields: { health: 1000, maxHealth: 1000 },
     fieldInfo: { maxHealth: { label: "Max Health" } },
     display: (s) => `${n(s.health)}/${n(s.maxHealth)}`,
   },
   {
     id: "healthRegen", icon: "❣", label: "Health Regen",
+    perPoint: { healthRegenRaw: 0.5 },
     fields: { healthRegenRaw: 0, healthRegenPercent: 1 },
     fieldInfo: {
         healthRegenRaw: { label: "Health Regen" },
@@ -43,12 +57,15 @@ export const STATS: StatDef[] = [
   },
   {
     id: "mana", icon: "✸", label: "Mana",
+    plain: ["mana"],
+    perPoint: { maxMana: 5 },
     fields: { mana: 100, maxMana: 100 },
     fieldInfo: { maxMana: { label: "Max Mana" } },
     display: (s) => `${n(s.mana)}/${n(s.maxMana)}`,
   },
   {
     id: "manaRegen", icon: "⸎", label: "Mana Regen",
+    perPoint: { manaRegenRaw: 0.5 },
     fields: { manaRegenRaw: 0, manaRegenPercent: 1 },
     fieldInfo: {
         manaRegenRaw: { label: "Mana Regen" },
@@ -58,27 +75,32 @@ export const STATS: StatDef[] = [
   },
   {
     id: "damage", icon: "🗡", label: "Damage",
+    perPoint: { damage: 1 },
     fields: { damage: 1 },
     display: (s) => n(s.damage),
   },
   {
     id: "strength", icon: "✤", label: "Strength",
+    perPoint: { strength: 1 },
     fields: { strength: 0 },
     display: (s) => n(s.strength),
   },
   {
     id: "critChance", icon: "✦", label: "Crit Chance",
+    perPoint: { critChance: 0.5 },
     fields: { critChance: 0 },
     fieldInfo: { critChance: { suffix: "%" } },
     display: (s) => `${n(s.critChance)}%`,
   },
   {
     id: "critDamage", icon: "☠", label: "Crit Damage",
+    perPoint: { critDamage: 1 },
     fields: { critDamage: 0 },
     display: (s) => n(s.critDamage),
   },
   {
     id: "defence", icon: "❈", label: "Defence",
+    perPoint: { defence: 1 },
     fields: { defence: 0 },
     display: (s) => n(s.defence),
   },
@@ -93,6 +115,25 @@ for (const def of STATS) {
   }
 }
 
+// Fields that get the base/points/equipment split: everything not marked plain
+const PLAIN = new Set(STATS.flatMap((def) => def.plain ?? []));
+for (const key of PLAIN) {
+  if (!(key in DEFAULT_STATS)) throw new Error(`"plain" lists unknown stat field: ${key}`);
+}
+export const COMPOSITE_FIELDS = Object.keys(DEFAULT_STATS).filter((k) => !PLAIN.has(k));
+
+// Fields players can spend ability points on: field -> stat gained per point
+export const POINT_RATES: Record<string, number> = {};
+for (const def of STATS) {
+  for (const [key, rate] of Object.entries(def.perPoint ?? {})) {
+    if (!COMPOSITE_FIELDS.includes(key)) {
+      throw new Error(`"perPoint" lists a field that can't take points: ${key}`);
+    }
+    if (!(rate > 0)) throw new Error(`"perPoint" rate for ${key} must be above 0`);
+    POINT_RATES[key] = rate;
+  }
+}
+
 // Fills in defaults for any field a player doesn't have yet, so adding
 // a new stat later never breaks players who are already in a room.
 export function withDefaults(stats: Stats | null | undefined): Stats {
@@ -104,7 +145,9 @@ function prettify(key: string): string {
 }
 
 // Icon, name, and unit for ONE stored field (used by item tooltips)
-export function describeField(key: string): { icon: string; label: string; suffix: string } {
+export function describeField(key: string): {
+  icon: string; label: string; suffix: string; statId: string;
+} {
   for (const def of STATS) {
     if (!(key in def.fields)) continue;
     const info = def.fieldInfo?.[key];
@@ -112,7 +155,8 @@ export function describeField(key: string): { icon: string; label: string; suffi
       icon: def.icon,
       label: info?.label ?? (Object.keys(def.fields).length === 1 ? def.label : prettify(key)),
       suffix: info?.suffix ?? "",
+      statId: def.id,
     };
   }
-  return { icon: "", label: prettify(key), suffix: "" };
+  return { icon: "", label: prettify(key), suffix: "", statId: "" };
 }

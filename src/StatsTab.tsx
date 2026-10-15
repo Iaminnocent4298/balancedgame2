@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { STATS, withDefaults } from "./stats";
+import { STATS } from "./stats";
 import { subscribeToRoomPlayers, type RoomPlayer } from "./rooms";
 import Tooltip from "./Tooltip";
+import { getDisplayStats } from "./statCalc";
 
 export default function StatsTab({ roomId, uid }: { roomId: string; uid: string }) {
   // undefined = still loading
@@ -39,7 +40,9 @@ export default function StatsTab({ roomId, uid }: { roomId: string; uid: string 
                 </th>
               </Tooltip>
               {sorted.map((p) => (
-                <td key={p.id}>{def.display(withDefaults(p.stats))}</td>
+                <td key={p.id}>
+                  {def.display(getDisplayStats(p.stats, p.points, p.equipment, p.enhancements))}
+                </td>
               ))}
             </tr>
           ))}

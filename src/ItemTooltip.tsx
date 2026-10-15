@@ -1,32 +1,51 @@
-import { getRarity, type Item } from "./items";
-import { describeField } from "./stats";
+import { ENHANCEMENTS } from "./enhancementCatalog";
+import { getItemType, getMaxEnhancements, getRarity, type Item } from "./items";
+import StatList from "./StatList";
 
 const round = (v: number) => String(Math.round(v * 100) / 100);
 
-export default function ItemTooltip({ item }: { item: Item }) {
-  const stats = Object.entries(item.stats ?? {}).filter(([, v]) => v !== 0);
+type Props = {
+  item: Item;
+  // Enhancement ids applied to this item. Leave out (e.g. in shops) to just show the slot count.
+  enhancements?: string[];
+};
+
+export default function ItemTooltip({ item, enhancements }: Props) {
+  const max = getMaxEnhancements(item);
+  const applied = (enhancements ?? []).flatMap((id) =>
+    ENHANCEMENTS[id] ? [ENHANCEMENTS[id]] : []
+  );
 
   return (
     <div className="item-tip">
       <div className={`item-name rarity-${item.rarity}`}>{item.name}</div>
-      <div className={`item-rarity rarity-${item.rarity}`}>{getRarity(item.rarity).label}</div>
+      <div className={`item-rarity rarity-${item.rarity}`}>
+        {getRarity(item.rarity).label} {getItemType(item.type).label}
+      </div>
 
       {item.levelReq !== undefined && <div>Requires level {item.levelReq}</div>}
 
-      {stats.length > 0 && (
-        <ul className="item-stats">
-          {stats.map(([key, amount]) => {
-            const { icon, label, suffix } = describeField(key);
-            return (
-              <li key={key} className={amount > 0 ? "item-stat-up" : "item-stat-down"}>
-                {icon} {label}: {amount > 0 ? "+" : "-"}
-                {round(Math.abs(amount))}
-                {suffix}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <StatList stats={item.stats} />
+
+      {max > 0 &&
+        (enhancements === undefined ? (
+          <div>Enhancement slots: {max}</div>
+        ) : (
+          <div className="item-enh">
+            <div className="item-enh-title">
+              Enhancements ({applied.length}/{max})
+            </div>
+            {applied.map((e, i) => (
+              <div key={i}>
+                <span className={`rarity-${e.rarity}`}>{e.name}</span>
+                <StatList stats={e.stats} />
+              </div>
+            ))}
+            {applied.length < max && (
+              <div className="item-enh-empty">Empty slots: {max - applied.length}</div>
+            )}
+          </div>
+        ))}
 
       {item.description && <p className="item-desc">{item.description}</p>}
 

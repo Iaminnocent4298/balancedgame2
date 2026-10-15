@@ -4,6 +4,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { DEFAULT_STATS, type Stats } from "./stats";
+import type { Enhancements, Equipment } from "./equipment";
 
 export const ROOM_MODES = [
   { id: "speed", label: "Speed" },
@@ -84,7 +85,9 @@ export async function createRoom(
           members: { [uid]: player.data()?.name ?? "Player" },
           createdAt: serverTimestamp(),
         });
-        tx.update(playerRef, { roomId: code, stats: { ...DEFAULT_STATS } });
+        tx.update(playerRef, {
+          roomId: code, stats: { ...DEFAULT_STATS }, points: {}, equipment: {}, enhancements: {},
+        });
       });
       return code;
     } catch (err) {
@@ -115,7 +118,9 @@ export async function joinRoom(uid: string, rawCode: string) {
     }
 
     tx.update(roomRef, { [`members.${uid}`]: player.data()?.name ?? "Player" });
-    tx.update(playerRef, { roomId: code, stats: { ...DEFAULT_STATS } });
+    tx.update(playerRef, {
+      roomId: code, stats: { ...DEFAULT_STATS }, points: {}, equipment: {}, enhancements: {},
+    });
   });
 }
 
@@ -142,7 +147,13 @@ export async function leaveRoom(uid: string) {
         });
       }
     }
-    tx.update(playerRef, { roomId: null, stats: deleteField() });
+    tx.update(playerRef, {
+      roomId: null,
+      stats: deleteField(),
+      points: deleteField(),
+      equipment: deleteField(),
+      enhancements: deleteField(),
+    });
   });
 }
 
@@ -156,7 +167,14 @@ export function subscribeToRoom(roomId: string, onChange: (room: Room | null) =>
   );
 }
 
-export type RoomPlayer = { id: string; name: string; stats: Stats | null };
+export type RoomPlayer = {
+  id: string;
+  name: string;
+  stats: Stats | null;
+  points: Stats | null;
+  equipment: Equipment | null;
+  enhancements: Enhancements | null;
+};
 
 // Live list of everyone whose roomId matches this room's code
 export function subscribeToRoomPlayers(
@@ -170,6 +188,9 @@ export function subscribeToRoomPlayers(
         id: d.id,
         name: d.data().name ?? "Player",
         stats: (d.data().stats as Stats | undefined) ?? null,
+        points: (d.data().points as Stats | undefined) ?? null,
+        equipment: (d.data().equipment as Equipment | undefined) ?? null,
+        enhancements: (d.data().enhancements as Enhancements | undefined) ?? null,
       }))
     )
   );
