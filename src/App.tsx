@@ -3,9 +3,12 @@ import type { User } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "./firebase";
 import { watchAuth, logOut } from "./auth";
+import { subscribeToAdmin } from "./admin";
+import AdminPanel from "./AdminPanel";
 import AuthForm from "./AuthForm";
 import RoomLobby from "./RoomLobby";
 import RoomView from "./RoomView";
+import SpectateView from "./SpectateView";
 
 const BANNER = `${import.meta.env.BASE_URL}banner.png`;
 const LOGO = `${import.meta.env.BASE_URL}logo.png`;
@@ -15,6 +18,8 @@ type PlayerData = { name: string | null; roomId: string | null };
 export default function App() {
   const [user, setUser] = useState<User | null | undefined>(undefined);
   const [player, setPlayer] = useState<PlayerData | undefined>(undefined);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [spectating, setSpectating] = useState<string | null>(null); // a room code, or null
 
   useEffect(() => watchAuth(setUser), []);
 
@@ -27,6 +32,15 @@ export default function App() {
       const data = snap.data();
       setPlayer({ name: data?.name ?? null, roomId: data?.roomId ?? null });
     });
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      setSpectating(null);
+      return;
+    }
+    return subscribeToAdmin(user.uid, setIsAdmin);
   }, [user]);
 
   if (user === undefined) return <p>Loading...</p>;
@@ -44,6 +58,9 @@ export default function App() {
   if (player === undefined) return <p>Loading...</p>;
 
   const inRoom = Boolean(player.roomId);
+  // Admins can watch any room, but only from the lobby (not while playing in one)
+  const spectatingId = isAdmin && !inRoom ? spectating : null;
+  const inRoomView = inRoom || spectatingId !== null;
 
   return (
     <div className="app">
@@ -51,22 +68,32 @@ export default function App() {
       <div className="box topbar">
         <img
           className="topbar-img"
-          src={inRoom ? BANNER : LOGO}
-          alt={inRoom ? "Balanced Game" : "Balanced Game logo"}
+          src={inRoomView ? BANNER : LOGO}
+          alt={inRoomView ? "Balanced Game" : "Balanced Game logo"}
         />
         <div className="topbar-user">
           <span>Welcome, {player.name ?? "..."}!</span>
+          {isAdmin && <span className="admin-badge">Admin</span>}
           <button onClick={logOut}>Log out</button>
         </div>
       </div>
 
       {/* Big banner on every page except inside a room */}
-      {!inRoom && <img className="banner" src={BANNER} alt="Balanced Game" />}
+      {!inRoomView && <img className="banner" src={BANNER} alt="Balanced Game" />}
 
       {inRoom ? (
         <RoomView uid={user.uid} roomId={player.roomId!} />
+      ) : spectatingId ? (
+        <SpectateView
+          uid={user.uid}
+          roomId={spectatingId}
+          onExit={() => setSpectating(null)}
+        />
       ) : (
-        <RoomLobby uid={user.uid} />
+        <RoomLobby
+          uid={user.uid}
+          extra={isAdmin ? <AdminPanel onSpectate={setSpectating} /> : undefined}
+        />
       )}
     </div>
   );

@@ -97,7 +97,14 @@ export async function createRoom(
           startedAt: null,
         });
         tx.update(playerRef, {
-          roomId: code, stats: { ...DEFAULT_STATS }, points: {}, equipment: {}, enhancements: {},
+          roomId: code,
+          stats: { ...DEFAULT_STATS },
+          points: {},
+          equipment: {},
+          enhancements: {},
+          cooldowns: {},
+          extraSlots: {},
+          regenTick: 0,
         });
       });
       return code;
@@ -133,7 +140,14 @@ export async function joinRoom(uid: string, rawCode: string) {
 
     tx.update(roomRef, { [`members.${uid}`]: player.data()?.name ?? "Player" });
     tx.update(playerRef, {
-      roomId: code, stats: { ...DEFAULT_STATS }, points: {}, equipment: {}, enhancements: {},
+      roomId: code,
+      stats: { ...DEFAULT_STATS },
+      points: {},
+      equipment: {},
+      enhancements: {},
+      cooldowns: {},
+      extraSlots: {},
+      regenTick: 0,
     });
   });
 }
@@ -167,6 +181,9 @@ export async function leaveRoom(uid: string) {
       points: deleteField(),
       equipment: deleteField(),
       enhancements: deleteField(),
+      cooldowns: deleteField(),
+      regenTick: deleteField(),
+      extraSlots: deleteField(),
     });
   });
 }
@@ -188,6 +205,7 @@ export type RoomPlayer = {
   points: Stats | null;
   equipment: Equipment | null;
   enhancements: Enhancements | null;
+  regenTick: number | null;
 };
 
 // Live list of everyone whose roomId matches this room's code
@@ -205,6 +223,7 @@ export function subscribeToRoomPlayers(
         points: (d.data().points as Stats | undefined) ?? null,
         equipment: (d.data().equipment as Equipment | undefined) ?? null,
         enhancements: (d.data().enhancements as Enhancements | undefined) ?? null,
+        regenTick: (d.data().regenTick as number | undefined) ?? null,
       }))
     )
   );
@@ -224,4 +243,22 @@ export async function startGame(uid: string, roomId: string) {
 
     tx.update(roomRef, { startedAt: serverTimestamp() });
   });
+}
+
+// ADMIN ONLY: every room that exists right now. Firestore refuses this for everyone else.
+export function subscribeToAllRooms(
+  onChange: (rooms: Room[]) => void,
+  onError?: (err: Error) => void
+) {
+  return onSnapshot(
+    collection(db, "rooms"),
+    (snap) =>
+      onChange(
+        snap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data({ serverTimestamps: "estimate" }) as Omit<Room, "id">),
+        }))
+      ),
+    (err) => onError?.(err)
+  );
 }

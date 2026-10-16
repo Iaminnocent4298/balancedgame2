@@ -1,10 +1,10 @@
 /* ===== Theme: change colours and sizes here ===== */
 :root {
-  --bg-top: #a200d1;
-  --bg-bottom: #2511b1;
-  --border: #7bcbf7;
-  --accent: #a812e7;          /* buttons, top bar, table fill */
-  --accent-hover: #bb3df2;
+  --bg-top: #040a0f;
+  --bg-bottom: #040a0f;
+  --border: #4e016a;
+  --accent: #0f0221;          /* buttons, top bar, table fill */
+  --accent-hover: #7e2aa1;
   --accent-selected: #7a0aa3; /* the open tab */
   --content: #a812e7;         /* text on light boxes */
   --panel-bg: #faf5ff;
@@ -177,17 +177,17 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    case-sensitive. The table is purple, so use LIGHT colours: dark ones
    (like dark red) will be hard to read.
    To colour only the stat's name, use ".stat-health th" instead. */
-.stat-level         { color: #ffe27a; }
-.stat-abilityPoints { color: #ffc48a; }
-.stat-coins         { color: #ffd34d; }
-.stat-health        { color: #ffb3ba; }
-.stat-healthRegen   { color: #ffd1dc; }
-.stat-mana          { color: #a8d8ff; }
-.stat-manaRegen     { color: #c9e6ff; }
-.stat-strength      { color: #e8c9a0; }
-.stat-critChance    { color: #a8f0c4; }
-.stat-critDamage    { color: #ffb0d0; }
-.stat-defence       { color: #9ff0e8; }
+.stat-level         { color: #fe96f9; }
+.stat-abilityPoints { color: #00fd3b; }
+.stat-coins         { color: #fba800; }
+.stat-health        { color: #ff6666; }
+.stat-healthRegen   { color: #ff6666; }
+.stat-mana          { color: #00fbf4; }
+.stat-manaRegen     { color: #00b0ab; }
+.stat-strength      { color: #ff5555; }
+.stat-critChance    { color: #459bff; }
+.stat-critDamage    { color: #459bff; }
+.stat-defence       { color: #55ff55; }
 
 /* ===== Centered pages (lobby, login, signup) ===== */
 .center-page {
@@ -224,7 +224,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   left: 0;
   top: 0;
   visibility: hidden; /* Tooltip.tsx reveals it once it's positioned */
-  z-index: 900;
+  z-index: 2000;
   width: max-content;
   max-width: 260px;
   padding: 0.5rem 0.75rem;
@@ -281,8 +281,21 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .rarity-mythic    { color: #ff9ec4; }
 
 /* ===== Equipment menus (weapon, armour, spells) ===== */
-.menu-head { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-.menu-head h2 { margin: 0; }
+.menu-head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr; /* Back button | title | empty, so the title is truly centred */
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.menu-head button { grid-column: 1; justify-self: start; }
+.menu-head h2 { grid-column: 2; margin: 0; text-align: center; }
+
+/* On narrow screens a long title could collide with the Back button, so stack them */
+@media (max-width: 480px) {
+  .menu-head { grid-template-columns: 1fr; justify-items: center; }
+  .menu-head button, .menu-head h2 { grid-column: 1; justify-self: center; }
+}
 
 .equip-row {
   display: flex;
@@ -404,3 +417,30 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .dead-banner { background: #7a1030; text-align: center; font-weight: 700; }
 .dead-note { text-align: center; font-style: italic; }
 .log-death { font-weight: 700; color: #ffc2cb; }
+
+/* ===== Cooldowns ===== */
+.choice-card-disabled .choice-pick { pointer-events: none; }
+
+/* ===== Spells ===== */
+.item-mana { color: #a8d8ff; } /* the mana cost line in tooltips. Placeholder colour */
+.choice-slot {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+/* ===== Admin ===== */
+.admin-badge {
+  background: #fff;
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 0.1rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.admin-panel { max-width: 100%; }
+.admin-panel h2 { font-size: 1.2rem; }
+.spectate-banner { text-align: center; font-weight: 700; }

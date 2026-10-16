@@ -10,6 +10,7 @@ import ActionTab from "./ActionTab";
 import LogTab from "./LogTab";
 import ChangelogTab from "./ChangelogTab";
 import { usePopup } from "./usePopup";
+import { useRegen } from "./useRegen";
 
 const TABS = [
   { id: "stats", label: "Stats" },
@@ -30,6 +31,10 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
 
   useEffect(() => subscribeToRoom(roomId, setRoom), [roomId]);
   useEffect(() => subscribeToRoomPlayers(roomId, setPlayers), [roomId]);
+
+  // Collects your own health and mana regen as each tick comes due
+  const me = players?.find((p) => p.id === uid);
+  useRegen(uid, room, me ? (me.regenTick ?? 0) : null);
 
   if (room === undefined) return <p>Loading room...</p>;
   if (room === null) {
@@ -148,7 +153,7 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
           </nav>
 
           <main role="tabpanel">
-            {tab === "stats" && <StatsTab roomId={roomId} uid={uid} />}
+            {tab === "stats" && <StatsTab room={room} uid={uid} />}
             {tab === "action" &&
               (dead ? (
                 <p className="dead-note">

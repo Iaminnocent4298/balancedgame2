@@ -1,32 +1,36 @@
 import { useEffect, useState } from "react";
 import type { Room } from "./rooms";
-import { ATTACK_SLOTS, GEAR_SLOTS, SPELL_SLOTS, type ItemTypeId } from "./items";
+import { ACTION_KINDS, GEAR_SLOTS, SLOTS, SPELL_SLOTS, slotAccepts, type SlotId } from "./items";
 import { ITEMS } from "./itemCatalog";
 import { subscribeToLoadout, type Loadout } from "./equipment";
-import { AttackError, performAttack, type AttackFailure } from "./attack";
+import { ActionError, performAction, type ActionFailure } from "./action";
+import Countdown from "./Countdown";
 import EquipmentMenu from "./EquipmentMenu";
 import ItemTooltip from "./ItemTooltip";
 import PointsMenu from "./PointsMenu";
 import ShopMenu from "./ShopMenu";
 import { SHOPS, type ShopId } from "./shopCatalog";
-import { usePopup } from "./usePopup";
+import { usePopup, type Choice } from "./usePopup";
 
 type MenuId = "gear" | "spells";
 type View = "main" | "points" | MenuId | ShopId;
 
 const isShop = (v: View): v is ShopId => v in SHOPS;
 
-const ATTACK_FAILURE_TITLES: Record<AttackFailure, string> = {
-  no_item: "Nothing to attack with",
+const ACTION_FAILURE_TITLES: Record<ActionFailure, string> = {
+  no_item: "Nothing to use",
   target_gone: "Target not found",
   target_down: "Target is down",
-  attacker_dead: "You're dead",
+  actor_dead: "You're dead",
   not_started: "Game not started",
-  invalid: "Can't attack",
+  on_cooldown: "On cooldown",
+  not_enough_mana: "Not enough mana",
+  nothing_to_heal: "Nothing to heal",
+  invalid: "Can't do that",
 };
 
-// Each menu: its title and which slots (item types) get a card, left to right
-const MENUS: Record<MenuId, { title: string; slots: ItemTypeId[] }> = {
+// Each menu: its title and which slots get a card, left to right
+const MENUS: Record<MenuId, { title: string; slots: SlotId[] }> = {
   gear: { title: "Gear", slots: GEAR_SLOTS },
   spells: { title: "Spells", slots: SPELL_SLOTS },
 };
@@ -59,50 +63,86 @@ export default function ActionTab({
   const [view, setView] = useState<View>("main");
   // undefined = still loading
   const [loadout, setLoadout] = useState<Loadout | undefined>(undefined);
-  const [attacking, setAttacking] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => subscribeToLoadout(uid, setLoadout), [uid]);
 
-  async function handleAttack(targetId: string, targetName: string) {
+  async function handleAction(targetId: string, targetName: string) {
     if (!loadout) return;
 
-    // 0) What the player can attack with: equipped weapon and damage spells
-    const options = ATTACK_SLOTS.flatMap((slot) => {
+    // 0) What the player can use: the equipped weapon and any attack or healing spells
+    const now = Date.now();
+    const options = SLOTS.flatMap(({ id: slot }) => {
       const itemId = loadout.equipment[slot];
       const item = itemId ? ITEMS[itemId] : undefined;
-      return item && item.type === slot
-        ? [{ slot, item, applied: loadout.enhancements[slot] ?? [] }]
-        : [];
+      const kind = item ? ACTION_KINDS[item.type] : undefined;
+      if (!item || !kind || !slotAccepts(slot, item.type)) return [];
+      return [
+        {
+          slot,
+          item,
+          kind,
+          applied: loadout.enhancements[slot] ?? [],
+          extra: loadout.extraSlots[slot] ?? 0,
+          readyAt: loadout.cooldowns[slot] ?? 0,
+        },
+      ];
     });
 
     if (options.length === 0) {
       showPopup({
-        title: "Nothing to attack with",
-        message: "Equip a weapon or a damage spell first. You can buy item bases in the shop.",
+        title: "Nothing to use",
+        message: "Equip a weapon or a spell first. You can buy item bases in the shop.",
       });
       return;
     }
 
-    const chosen = await choosePopup<ItemTypeId>({
-      title: `Attack ${targetId === uid ? "yourself" : targetName}`,
-      message: "Pick what to attack with.",
-      groups: [
-        {
-          choices: options.map(({ slot, item, applied }) => ({
-            value: slot,
-            buttonLabel: "Attack",
-            label: <ItemTooltip item={item} enhancements={applied} />,
-          })),
-        },
-      ],
+    const toChoice = ({
+      slot, item, kind, applied, extra, readyAt,
+    }: (typeof options)[number]): Choice<SlotId> => {
+      const cooling = readyAt > now;
+      return {
+        value: slot,
+        disabled: cooling,
+        buttonLabel: cooling ? "On cooldown" : kind === "heal" ? "Heal" : "Attack",
+        tooltip: cooling ? (
+          <>
+            On cooldown: <Countdown until={readyAt} /> remaining
+          </>
+        ) : undefined,
+        label: <ItemTooltip item={item} enhancements={applied} extraSlots={extra} />,
+      };
+    };
+
+    const groups = [
+      {
+        title: "Weapon",
+        choices: options.filter((o) => !SPELL_SLOTS.includes(o.slot)).map(toChoice),
+      },
+      {
+        title: "Spells",
+        choices: options.filter((o) => SPELL_SLOTS.includes(o.slot)).map(toChoice),
+      },
+    ].filter((g) => g.choices.length > 0);
+
+    const chosen = await choosePopup<SlotId>({
+      title: `Use on ${targetId === uid ? "yourself" : targetName}`,
+      message: "Pick a weapon or spell.",
+      groups,
     });
-    if (!chosen) return; // cancelled
 
-    setAttacking(true);
+    // Cancel, Escape, and clicking outside all give back null: do nothing
+    if (chosen === null) return;
+    if (!SLOTS.some((s) => s.id === chosen)) {
+      console.warn("The popup returned an unexpected value:", chosen);
+      return;
+    }
+
+    setBusy(true);
     try {
-      const r = await performAttack(uid, targetId, chosen);
+      const r = await performAction(uid, targetId, chosen);
 
-      if (r.levelsGained > 0) {
+      if (r.kind === "attack" && r.levelsGained > 0) {
         const n = r.levelsGained;
         showPopup({
           title: "Level up!",
@@ -112,14 +152,14 @@ export default function ActionTab({
         });
       }
     } catch (err) {
-      if (err instanceof AttackError) {
-        showPopup({ title: ATTACK_FAILURE_TITLES[err.reason], message: err.message });
+      if (err instanceof ActionError) {
+        showPopup({ title: ACTION_FAILURE_TITLES[err.reason], message: err.message });
       } else {
         console.error(err);
-        showPopup({ title: "Attack failed", message: "Something went wrong. Please try again." });
+        showPopup({ title: "Action failed", message: "Something went wrong. Please try again." });
       }
     } finally {
-      setAttacking(false);
+      setBusy(false);
     }
   }
 
@@ -138,6 +178,7 @@ export default function ActionTab({
         slots={menu.slots}
         equipment={loadout.equipment}
         enhancements={loadout.enhancements}
+        extraSlots={loadout.extraSlots}
         uid={uid}
         onBack={() => setView("main")}
       />
@@ -159,8 +200,8 @@ export default function ActionTab({
             return (
               <button
                 key={id}
-                disabled={attacking || !loadout || down}
-                onClick={() => handleAttack(id, name)}
+                disabled={busy || !loadout || down}
+                onClick={() => handleAction(id, name)}
               >
                 {name}
                 {id === uid && " (you)"}

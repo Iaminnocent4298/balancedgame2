@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ENHANCEMENTS } from "./enhancementCatalog";
 import type { Enhancement } from "./enhancements";
 import { getLoadout, subscribeToLoadout, type Loadout } from "./equipment";
+import { EXPANDERS, type Expander } from "./expanderCatalog";
+import { formatCountdown } from "./format";
 import { getSeasonInfo } from "./gameClock";
 import { ITEMS } from "./itemCatalog";
 import {
-  GEAR_SLOTS, ITEM_TYPES, SPELL_SLOTS, getItemType, getMaxEnhancements, getRarity,
-  type ItemTypeId, type RarityId,
+  GEAR_SLOTS, SLOTS, SPELL_SLOTS, canExpandSlots, getItemType, getMaxEnhancements, getRarity,
+  getSlot, slotAccepts, type Item, type RarityId, type SlotId,
 } from "./items";
 import ItemTooltip from "./ItemTooltip";
 import { getRotation } from "./rotation";
@@ -15,7 +17,7 @@ import {
   SHOPS, entryKey, getPrice, isRotating, type Shop, type ShopEntry, type ShopId,
 } from "./shopCatalog";
 import {
-  PurchaseError, purchaseEnhancement, purchaseItem, type PurchaseFailure,
+  PurchaseError, purchaseEnhancement, purchaseExpander, purchaseItem, type PurchaseFailure,
 } from "./shop";
 import { describeField } from "./stats";
 import StatList from "./StatList";
@@ -23,22 +25,14 @@ import Tooltip from "./Tooltip";
 import { usePopup, type Choice } from "./usePopup";
 
 const round = (v: number) => String(Math.round(v * 100) / 100);
-const pad = (n: number) => String(n).padStart(2, "0");
-
-// 125000 -> "2:05", 4000000 -> "1:06:40"
-function formatCountdown(ms: number): string {
-  const total = Math.max(0, Math.ceil(ms / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
 
 const FAILURE_TITLES: Record<PurchaseFailure, string> = {
   cant_afford: "Can't afford that",
   already_owned: "Already owned",
+  no_free_slot: "No free slot",
   slots_full: "No enhancement slots",
   nothing_to_enhance: "Nothing to enhance",
+  cant_expand: "Can't expand",
   level_too_low: "Level too low",
   invalid: "Not available",
 };
@@ -54,6 +48,26 @@ type Row = {
   buy: () => Promise<void>;
 };
 
+// An item the player owns, with everything needed to show and judge it
+type Owned = { slot: SlotId; item: Item; applied: string[]; extra: number };
+
+function listOwned(loadout: Loadout): Owned[] {
+  return SLOTS.flatMap(({ id: slot }) => {
+    const itemId = loadout.equipment[slot];
+    const item = itemId ? ITEMS[itemId] : undefined;
+    return item && slotAccepts(slot, item.type)
+      ? [
+          {
+            slot,
+            item,
+            applied: loadout.enhancements[slot] ?? [],
+            extra: loadout.extraSlots[slot] ?? 0,
+          },
+        ]
+      : [];
+  });
+}
+
 function EnhancementTip({ enhancement }: { enhancement: Enhancement }) {
   return (
     <div className="item-tip">
@@ -65,6 +79,24 @@ function EnhancementTip({ enhancement }: { enhancement: Enhancement }) {
       <StatList stats={enhancement.stats} />
       {enhancement.description && <p className="item-desc">{enhancement.description}</p>}
       <div className="item-value">Value: {round(enhancement.value)} coins</div>
+    </div>
+  );
+}
+
+function ExpanderTip({ expander }: { expander: Expander }) {
+  return (
+    <div className="item-tip">
+      <div className={`item-name rarity-${expander.rarity}`}>{expander.name}</div>
+      <div className={`item-rarity rarity-${expander.rarity}`}>
+        {getRarity(expander.rarity).label} Enhancement Expander
+      </div>
+      {expander.levelReq !== undefined && <div>Requires level {expander.levelReq}</div>}
+      <div>
+        Adds {expander.slots} enhancement slot{expander.slots === 1 ? "" : "s"} to one weapon,
+        armour piece, or spell
+      </div>
+      {expander.description && <p className="item-desc">{expander.description}</p>}
+      <div className="item-value">Value: {round(expander.value)} coins</div>
     </div>
   );
 }
@@ -137,75 +169,130 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     }
   }
 
+  // Shows the player's gear and spells as cards, and resolves with the slot they pick
+  // (or null if they cancel). Row 1: weapon and armour. Row 2: spells.
+  function chooseOwned(
+    owned: Owned[],
+    opts: {
+      title: string;
+      message: string;
+      status: (o: Owned) => { disabled: boolean; buttonLabel: string };
+    }
+  ) {
+    const toChoice = (o: Owned): Choice<SlotId> => ({
+      value: o.slot,
+      ...opts.status(o),
+      label: (
+        <>
+          <div className="choice-slot">{getSlot(o.slot).label}</div>
+          <ItemTooltip item={o.item} enhancements={o.applied} extraSlots={o.extra} />
+        </>
+      ),
+    });
+
+    const groups = [
+      { title: "Gear", choices: owned.filter((o) => GEAR_SLOTS.includes(o.slot)).map(toChoice) },
+      { title: "Spells", choices: owned.filter((o) => SPELL_SLOTS.includes(o.slot)).map(toChoice) },
+    ].filter((g) => g.choices.length > 0);
+
+    return choosePopup<SlotId>({ title: opts.title, message: opts.message, groups });
+  }
+
   // Check, ask which item to enhance, then pay. Cancelling the popup charges nothing.
   async function buyEnhancement(entry: ShopEntry, price: number) {
     assertOnSale(entry);
     const enhancement = ENHANCEMENTS[entry.id];
-    const {
-      equipment, enhancements, coins: current, level: currentLevel,
-    } = await getLoadout(uid);
+    const loadout = await getLoadout(uid);
 
-    if (enhancement.levelReq !== undefined && currentLevel < enhancement.levelReq) {
+    if (enhancement.levelReq !== undefined && loadout.level < enhancement.levelReq) {
       throw new PurchaseError(
         "level_too_low",
-        `${enhancement.name} requires level ${enhancement.levelReq}, but you're level ${currentLevel}.`
+        `${enhancement.name} requires level ${enhancement.levelReq}, but you're level ${loadout.level}.`
       );
     }
 
-    // Every gear piece and spell the player owns, in menu order
-    const owned = ITEM_TYPES.flatMap(({ id: slot }) => {
-      const itemId = equipment[slot];
-      const item = itemId ? ITEMS[itemId] : undefined;
-      return item && item.type === slot
-        ? [{ slot, item, applied: enhancements[slot] ?? [] }]
-        : [];
-    });
-
+    const owned = listOwned(loadout);
     if (owned.length === 0) {
       throw new PurchaseError(
         "nothing_to_enhance",
         "You don't have any gear or spells to enhance yet. Buy an item base first."
       );
     }
-    if (current < price) {
+    if (loadout.coins < price) {
       throw new PurchaseError(
         "cant_afford",
-        `${enhancement.name} costs ${price} coins, but you only have ${current}.`
+        `${enhancement.name} costs ${price} coins, but you only have ${loadout.coins}.`
       );
     }
-    if (owned.every((o) => o.applied.length >= getMaxEnhancements(o.item))) {
+    const isFull = (o: Owned) => o.applied.length >= getMaxEnhancements(o.item, o.extra);
+    if (owned.every(isFull)) {
       throw new PurchaseError(
         "slots_full",
         "All of your gear and spells already have the maximum number of enhancements."
       );
     }
 
-    // Each owned item becomes a card showing its full details
-    const toChoice = ({ slot, item, applied }: (typeof owned)[number]): Choice<ItemTypeId> => {
-      const full = applied.length >= getMaxEnhancements(item);
-      return {
-        value: slot,
-        disabled: full,
-        buttonLabel: full ? "Full" : "Apply here",
-        label: <ItemTooltip item={item} enhancements={applied} />,
-      };
-    };
-
-    // Row 1: weapon and armour. Row 2: spells. A row you own nothing for is skipped.
-    const groups = [
-      { title: "Gear", choices: owned.filter((o) => GEAR_SLOTS.includes(o.slot)).map(toChoice) },
-      { title: "Spells", choices: owned.filter((o) => SPELL_SLOTS.includes(o.slot)).map(toChoice) },
-    ].filter((g) => g.choices.length > 0);
-
-    const slot = await choosePopup<ItemTypeId>({
+    const slot = await chooseOwned(owned, {
       title: `Apply ${enhancement.name}`,
       message: `Pick the gear or spell to enhance. It costs ${price} coins.`,
-      groups,
+      status: (o) => ({
+        disabled: isFull(o),
+        buttonLabel: isFull(o) ? "Full" : "Apply here",
+      }),
     });
     if (!slot) return; // cancelled
 
     assertOnSale(entry); // the stock may have rotated while the popup was open
     await purchaseEnhancement(uid, entry.id, price, slot);
+  }
+
+  // Same flow for expanders: items that have no enhancement slots can't be picked
+  async function buyExpander(entry: ShopEntry, price: number) {
+    assertOnSale(entry);
+    const expander = EXPANDERS[entry.id];
+    const loadout = await getLoadout(uid);
+
+    if (expander.levelReq !== undefined && loadout.level < expander.levelReq) {
+      throw new PurchaseError(
+        "level_too_low",
+        `${expander.name} requires level ${expander.levelReq}, but you're level ${loadout.level}.`
+      );
+    }
+
+    const owned = listOwned(loadout);
+    if (owned.length === 0) {
+      throw new PurchaseError(
+        "nothing_to_enhance",
+        "You don't have any gear or spells to expand yet. Buy an item base first."
+      );
+    }
+    if (!owned.some((o) => canExpandSlots(o.item))) {
+      throw new PurchaseError(
+        "cant_expand",
+        "None of your gear or spells can have more enhancement slots."
+      );
+    }
+    if (loadout.coins < price) {
+      throw new PurchaseError(
+        "cant_afford",
+        `${expander.name} costs ${price} coins, but you only have ${loadout.coins}.`
+      );
+    }
+
+    const slot = await chooseOwned(owned, {
+      title: `Apply ${expander.name}`,
+      message:
+        `Pick the gear or spell to expand. It gains ${expander.slots} enhancement ` +
+        `slot${expander.slots === 1 ? "" : "s"} and costs ${price} coins.`,
+      status: (o) =>
+        canExpandSlots(o.item)
+          ? { disabled: false, buttonLabel: `Add ${expander.slots}` }
+          : { disabled: true, buttonLabel: "No slots" },
+    });
+    if (!slot) return; // cancelled
+
+    assertOnSale(entry);
+    await purchaseExpander(uid, entry.id, price, slot);
   }
 
   const rows: Row[] = entries.map((entry) => {
@@ -228,16 +315,30 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
       };
     }
 
-    const enhancement = ENHANCEMENTS[entry.id];
+    if (entry.kind === "enhancement") {
+      const enhancement = ENHANCEMENTS[entry.id];
+      return {
+        key: entryKey(entry),
+        name: enhancement.name,
+        tag: "Enhancement",
+        levelReq: enhancement.levelReq,
+        rarity: enhancement.rarity,
+        tooltip: <EnhancementTip enhancement={enhancement} />,
+        price,
+        buy: () => buyEnhancement(entry, price),
+      };
+    }
+
+    const expander = EXPANDERS[entry.id];
     return {
       key: entryKey(entry),
-      name: enhancement.name,
-      tag: "Enhancement",
-      levelReq: enhancement.levelReq,
-      rarity: enhancement.rarity,
-      tooltip: <EnhancementTip enhancement={enhancement} />,
+      name: expander.name,
+      tag: "Enhancement Expander",
+      levelReq: expander.levelReq,
+      rarity: expander.rarity,
+      tooltip: <ExpanderTip expander={expander} />,
       price,
-      buy: () => buyEnhancement(entry, price),
+      buy: () => buyExpander(entry, price),
     };
   });
 

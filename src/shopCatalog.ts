@@ -1,7 +1,8 @@
 import { ENHANCEMENTS } from "./enhancementCatalog";
 import { ITEMS } from "./itemCatalog";
+import { EXPANDERS } from "./expanderCatalog";
 
-export type SaleKind = "item" | "enhancement";
+export type SaleKind = "item" | "enhancement" | "expander";
 
 export type ShopEntry = {
   kind: SaleKind; // "item" = from itemCatalog.ts, "enhancement" = from enhancementCatalog.ts
@@ -14,6 +15,7 @@ const item = (id: string, price?: number): ShopEntry => ({ kind: "item", id, pri
 const enhancement = (id: string, price?: number): ShopEntry => ({
   kind: "enhancement", id, price,
 });
+const expander = (id: string, price?: number): ShopEntry => ({ kind: "expander", id, price });
 
 // Always sells the same things
 export type FixedShop = { title: string; entries: ShopEntry[] };
@@ -28,51 +30,25 @@ export const SHOPS = {
   itemBases: {
     title: "Item Bases",
     entries: [
-      item("weapon_base"),
-      item("helmet_base"),
-      item("chestplate_base"),
-      item("leggings_base"),
-      item("boots_base"),
-      item("healing_spell_base"),
-      item("damage_spell_base"),
-      item("aoe_spell_base"),
-      item("ultimate_spell_base"),
     ],
   },
   enhancements: {
     title: "Enhancements",
     entries: [
-      enhancement("sharpness"),
-      enhancement("fortify"),
-      enhancement("vitality"),
-      enhancement("arcane_focus"),
-      enhancement("keen_edge"),
-      enhancement("empower"),
     ],
   },
   limited: {
     title: "Limited!",
     slots: 5, // how many are on sale at once. Raise it as the pool grows
     pool: [
-      item("tempered_blade"),
-      item("warden_helm"),
-      item("warden_plate"),
-      item("warden_boots"),
-      item("greater_heal"),
-      item("arc_bolt"),
-      enhancement("razor_edge"),
-      enhancement("bulwark"),
-      enhancement("titan_heart"),
-      enhancement("deep_wellspring"),
-      enhancement("deadeye"),
-      enhancement("berserkers_rage"),
     ],
   },
 } satisfies Record<string, Shop>;
 
 export type ShopId = keyof typeof SHOPS;
 
-const catalogFor = (kind: SaleKind) => (kind === "item" ? ITEMS : ENHANCEMENTS);
+const catalogFor = (kind: SaleKind): Record<string, { value: number }> =>
+  kind === "item" ? ITEMS : kind === "enhancement" ? ENHANCEMENTS : EXPANDERS;
 
 export const getPrice = (entry: ShopEntry) =>
   entry.price ?? catalogFor(entry.kind)[entry.id].value;

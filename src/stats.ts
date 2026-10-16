@@ -34,7 +34,7 @@ export const STATS: StatDef[] = [
     id: "coins", icon: "$", label: "Coins",
     description: "Currency used to buy items. Earned by salvaging equipment.",
     plain: ["coins"],   // a plain value: not split into base/points/equipment
-    fields: { coins: 0 },
+    fields: { coins: 25 },
     display: (s) => n(s.coins),
   },
   {
@@ -135,6 +135,8 @@ export type ItemStatDef = { id: string; icon: string; label: string; suffix?: st
 
 export const ITEM_STATS: ItemStatDef[] = [
   { id: "damage", icon: "🗡", label: "Damage" },
+  { id: "healRaw", icon: "✚", label: "Heal" },
+  { id: "healPercent", icon: "✚", label: "Heal", suffix: "% max health" },
 ];
 
 for (const s of ITEM_STATS) {

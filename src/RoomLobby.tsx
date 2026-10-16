@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   ROOM_MODES, MIN_PLAYERS, MAX_PLAYERS,
   createRoom, joinRoom,
   type RoomMode,
 } from "./rooms";
 
-export default function RoomLobby({ uid }: { uid: string }) {
+export default function RoomLobby({ uid, extra }: { uid: string; extra?: ReactNode }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<RoomMode>(ROOM_MODES[0].id);
   const [maxPlayers, setMaxPlayers] = useState(4);
@@ -69,6 +69,7 @@ export default function RoomLobby({ uid }: { uid: string }) {
           </form>
         </section>
       </div>
+      {extra}
 
       {error && <div className="box error">{error}</div>}
     </div>

@@ -1,26 +1,30 @@
 import { useState } from "react";
-import { salvageItem, type Enhancements, type Equipment } from "./equipment";
-import { getItemType, getSalvageValue, type Item, type ItemTypeId } from "./items";
+import { salvageItem, type Enhancements, type Equipment, type ExtraSlots } from "./equipment";
+import { getSalvageValue, getSlot, slotAccepts, type Item, type SlotId } from "./items";
 import { ITEMS } from "./itemCatalog";
 import ItemTooltip from "./ItemTooltip";
 import { usePopup } from "./usePopup";
 
 type Props = {
   title: string;
-  slots: ItemTypeId[]; // one card per slot, in this order
+  slots: SlotId[]; // one card per slot, in this order
   equipment: Equipment;
   enhancements: Enhancements;
+  extraSlots: ExtraSlots;
   uid: string;
   onBack: () => void;
 };
 
-export default function EquipmentMenu({ title, slots, equipment, enhancements, uid, onBack }: Props) {
+export default function EquipmentMenu({
+  title, slots, equipment, enhancements, extraSlots, uid, onBack,
+}: Props) {
   const { showPopup, confirmPopup } = usePopup();
   const [busy, setBusy] = useState(false);
 
-  async function handleSalvage(slot: ItemTypeId, item: Item) {
+  async function handleSalvage(slot: SlotId, item: Item) {
     const refund = getSalvageValue(item);
     const count = enhancements[slot]?.length ?? 0;
+    const extra = extraSlots[slot] ?? 0;
 
     const ok = await confirmPopup({
       title: "Salvage item?",
@@ -31,6 +35,12 @@ export default function EquipmentMenu({ title, slots, equipment, enhancements, u
           {count > 0 && (
             <>
               Its {count} enhancement{count === 1 ? "" : "s"} will be lost (not refunded).{" "}
+            </>
+          )}
+          {extra > 0 && (
+            <>
+              The {extra} extra enhancement slot{extra === 1 ? "" : "s"} you bought will be lost
+              too.{" "}
             </>
           )}
           Its stat bonuses will be removed. This can't be undone.
@@ -68,12 +78,16 @@ export default function EquipmentMenu({ title, slots, equipment, enhancements, u
 
           return (
             <section key={slot} className="box equip-card">
-              <h3>{getItemType(slot).label}</h3>
+              <h3>{getSlot(slot).label}</h3>
               {!itemId ? (
                 <p className="equip-empty">Empty</p>
-              ) : item?.type === slot ? (
+              ) : item && slotAccepts(slot, item.type) ? (
                 <>
-                  <ItemTooltip item={item} enhancements={enhancements[slot] ?? []} />
+                  <ItemTooltip
+                    item={item}
+                    enhancements={enhancements[slot] ?? []}
+                    extraSlots={extraSlots[slot] ?? 0}
+                  />
                   <button
                     className="salvage"
                     disabled={busy}

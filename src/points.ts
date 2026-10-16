@@ -2,6 +2,7 @@ import { doc, onSnapshot, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 import { DEFAULT_STATS, POINT_RATES, type Stats } from "./stats";
 import type { Enhancements, Equipment } from "./equipment";
+import { clampVitals } from "./regen";
 
 export type PointsState = {
   available: number; // unspent ability points
@@ -38,9 +39,18 @@ export async function changePoints(uid: string, field: string, delta: number): P
     if (delta > 0 && available < delta) return false; // not enough AP
     if (delta < 0 && spent < -delta) return false; // can't go below 0 in a stat
 
+    // Taking points out of max health or max mana can leave the current value over the max
+    const trim = clampVitals(
+      data?.stats,
+      { ...(data?.points as Stats | undefined), [field]: spent + delta },
+      data?.equipment,
+      data?.enhancements
+    );
+
     tx.update(playerRef, {
       "stats.abilityPoints": available - delta,
       [`points.${field}`]: spent + delta,
+      ...trim,
     });
     return true;
   });

@@ -21,7 +21,15 @@ type DeathLogEntry = {
   player: string;
 };
 
-export type LogEntry = AttackLogEntry | DeathLogEntry;
+type HealLogEntry = {
+  kind: "heal";
+  at: number;
+  healer: string;
+  patient: string;
+  amount: number; // health actually restored
+};
+
+export type LogEntry = AttackLogEntry | DeathLogEntry | HealLogEntry;
 
 // Newest first, capped at LOG_LIMIT
 export function pushLog(log: LogEntry[] | undefined, entry: LogEntry): LogEntry[] {
@@ -41,6 +49,8 @@ export function describeEntry(entry: LogEntry): string {
       );
     case "death":
       return `${entry.player} has died!`;
+    case "heal":
+      return `${entry.healer} healed ${entry.patient} for ${round2(entry.amount)} health`;
   }
 }
 

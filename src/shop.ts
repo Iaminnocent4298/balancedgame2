@@ -2,17 +2,20 @@ import { doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 import { ITEMS } from "./itemCatalog";
 import { ENHANCEMENTS } from "./enhancementCatalog";
-import { getItemType, getMaxEnhancements, type ItemTypeId } from "./items";
+import { canExpandSlots, getItemType, getMaxEnhancements, slotAccepts, slotsFor, type SlotId } from "./items";
+import { EXPANDERS } from "./expanderCatalog";
 import { DEFAULT_STATS } from "./stats";
 import type { Equipment } from "./equipment";
 
 export type PurchaseFailure =
   | "cant_afford"
   | "already_owned"
+  | "no_free_slot"
   | "slots_full"
   | "nothing_to_enhance"
   | "level_too_low"
-  | "invalid";
+  | "invalid"
+  | "cant_expand";
 
 // Thrown for problems the player should be told about
 export class PurchaseError extends Error {
@@ -32,14 +35,15 @@ function checkLevel(name: string, required: number | undefined, level: number) {
   }
 }
 
-// Checks everything, then takes the coins and fills the slot in one step,
+// Checks everything, then takes the coins and fills a slot in one step,
 // so you can never pay without getting the item (or get it without paying).
+// Weapons and armour: one per type. Spells go in the first empty spell slot.
 export async function purchaseItem(uid: string, itemId: string, price: number): Promise<void> {
   const item = ITEMS[itemId];
   if (!item) throw new PurchaseError("invalid", "That item isn't available.");
 
-  const slot = item.type;
-  const typeLabel = getItemType(slot).label;
+  const typeLabel = getItemType(item.type).label;
+  const candidates = slotsFor(item.type);
   const playerRef = doc(db, "players", uid);
 
   await runTransaction(db, async (tx) => {
@@ -49,11 +53,18 @@ export async function purchaseItem(uid: string, itemId: string, price: number): 
     const equipment = (data?.equipment as Equipment | undefined) ?? {};
 
     checkLevel(item.name, item.levelReq, level);
-    if (equipment[slot]) {
-      throw new PurchaseError(
-        "already_owned",
-        `You already own a ${typeLabel}. Salvage it first if you want a new one.`
-      );
+
+    const slot = candidates.find((s) => !equipment[s]);
+    if (!slot) {
+      throw candidates.length === 1
+        ? new PurchaseError(
+            "already_owned",
+            `You already own a ${typeLabel}. Salvage it first if you want a new one.`
+          )
+        : new PurchaseError(
+            "no_free_slot",
+            `All ${candidates.length} of your spell slots are full. Salvage a spell first.`
+          );
     }
     if (coins < price) {
       throw new PurchaseError(
@@ -74,7 +85,7 @@ export async function purchaseEnhancement(
   uid: string,
   enhancementId: string,
   price: number,
-  slot: ItemTypeId
+  slot: SlotId
 ): Promise<void> {
   const enhancement = ENHANCEMENTS[enhancementId];
   if (!enhancement) throw new PurchaseError("invalid", "That enhancement isn't available.");
@@ -90,12 +101,12 @@ export async function purchaseEnhancement(
 
     const itemId = (data?.equipment as Equipment | undefined)?.[slot];
     const item = itemId ? ITEMS[itemId] : undefined;
-    if (!item || item.type !== slot) {
+    if (!item || !slotAccepts(slot, item.type)) {
       throw new PurchaseError("invalid", "That item is no longer equipped.");
     }
 
     const applied: string[] = data?.enhancements?.[slot] ?? [];
-    const max = getMaxEnhancements(item);
+    const max = getMaxEnhancements(item, (data?.extraSlots?.[slot] as number | undefined) ?? 0);
     if (applied.length >= max) {
       throw new PurchaseError(
         "slots_full",
@@ -112,6 +123,51 @@ export async function purchaseEnhancement(
     tx.update(playerRef, {
       "stats.coins": coins - price,
       [`enhancements.${slot}`]: [...applied, enhancementId],
+    });
+  });
+}
+
+// Adds the expander's enhancement slots to the item in `slot`
+export async function purchaseExpander(
+  uid: string,
+  expanderId: string,
+  price: number,
+  slot: SlotId
+): Promise<void> {
+  const expander = EXPANDERS[expanderId];
+  if (!expander) throw new PurchaseError("invalid", "That expander isn't available.");
+
+  const playerRef = doc(db, "players", uid);
+
+  await runTransaction(db, async (tx) => {
+    const data = (await tx.get(playerRef)).data();
+    const coins = (data?.stats?.coins as number | undefined) ?? DEFAULT_STATS.coins;
+    const level = (data?.stats?.level as number | undefined) ?? DEFAULT_STATS.level;
+
+    checkLevel(expander.name, expander.levelReq, level);
+
+    const itemId = (data?.equipment as Equipment | undefined)?.[slot];
+    const item = itemId ? ITEMS[itemId] : undefined;
+    if (!item || !slotAccepts(slot, item.type)) {
+      throw new PurchaseError("invalid", "That item is no longer equipped.");
+    }
+    if (!canExpandSlots(item)) {
+      throw new PurchaseError(
+        "cant_expand",
+        `${item.name} has no enhancement slots, so it can't be expanded.`
+      );
+    }
+    if (coins < price) {
+      throw new PurchaseError(
+        "cant_afford",
+        `${expander.name} costs ${price} coins, but you only have ${coins}.`
+      );
+    }
+
+    const extra = (data?.extraSlots?.[slot] as number | undefined) ?? 0;
+    tx.update(playerRef, {
+      "stats.coins": coins - price,
+      [`extraSlots.${slot}`]: extra + expander.slots,
     });
   });
 }

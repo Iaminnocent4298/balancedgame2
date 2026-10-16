@@ -1,7 +1,7 @@
 import { COMPOSITE_FIELDS, POINT_RATES, withDefaults, type Stats } from "./stats";
 import { ITEMS } from "./itemCatalog";
 import { ENHANCEMENTS } from "./enhancementCatalog";
-import type { ItemTypeId } from "./items";
+import { slotAccepts, type SlotId } from "./items";
 import type { Enhancements, Equipment } from "./equipment";
 
 export type StatBreakdown = {
@@ -26,9 +26,9 @@ export function getEquipmentBonuses(
 
   for (const [slot, itemId] of Object.entries(equipment ?? {})) {
     const item = itemId ? ITEMS[itemId] : undefined;
-    if (!item || item.type !== slot) continue;
+    if (!item || !slotAccepts(slot as SlotId, item.type)) continue;
     add(item.stats);
-    for (const id of enhancements?.[slot as ItemTypeId] ?? []) add(ENHANCEMENTS[id]?.stats);
+    for (const id of enhancements?.[slot as SlotId] ?? []) add(ENHANCEMENTS[id]?.stats);
   }
   return sum;
 }
