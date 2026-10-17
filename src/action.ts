@@ -197,21 +197,23 @@ export async function performAction(
       const newHealth = Math.max(0, targetVitals.health - hit.damage);
       targetVitals.health = newHealth;
 
-      // 7) XP equal to the damage, with level-ups. 8) Coins: damage / 10, floored
-      const progress = applyXp(
-        actorStats.level,
-        actorStats.levelXp,
-        actorStats.nextLevelXp,
-        hit.damage
-      );
-      const coinsGained = Math.floor(hit.damage / 5);
-      Object.assign(actorExtra, {
-        "stats.level": progress.level,
-        "stats.levelXp": progress.levelXp,
-        "stats.nextLevelXp": progress.nextLevelXp,
-        "stats.abilityPoints": actorStats.abilityPoints + progress.apGained,
-        "stats.coins": actorStats.coins + coinsGained,
-      });
+      // 7) XP equal to the damage, with level-ups. 8) Coins: damage / 5, floored.
+      // Hitting yourself earns nothing, so there's no reward to calculate or write.
+      const rewarded = !selfTarget;
+      const progress = rewarded
+        ? applyXp(actorStats.level, actorStats.levelXp, actorStats.nextLevelXp, hit.damage)
+        : null;
+      const coinsGained = rewarded ? Math.floor(hit.damage / 5) : 0;
+
+      if (progress) {
+        Object.assign(actorExtra, {
+          "stats.level": progress.level,
+          "stats.levelXp": progress.levelXp,
+          "stats.nextLevelXp": progress.nextLevelXp,
+          "stats.abilityPoints": actorStats.abilityPoints + progress.apGained,
+          "stats.coins": actorStats.coins + coinsGained,
+        });
+      }
 
       entries.push({
         kind: "attack",
@@ -230,10 +232,10 @@ export async function performAction(
         damage: hit.damage,
         crit: hit.crit,
         targetHealth: newHealth,
-        xpGained: hit.damage,
+        xpGained: progress ? hit.damage : 0,
         coinsGained,
-        levelsGained: progress.levelsGained,
-        apGained: progress.apGained,
+        levelsGained: progress?.levelsGained ?? 0,
+        apGained: progress?.apGained ?? 0,
       };
     }
 

@@ -7,12 +7,12 @@ const MINUTE = 60_000;
 // Keep them whole numbers so every duration stays a clean number.
 export const TIME_MULTIPLIER: Record<RoomMode, number> = {
   speed: 1,
-  normal: 15, // a day takes 15x as long as in Speed
-  daily: 360, // a day takes 360x as long as in Speed
+  normal: 30, // a day takes 15x as long as in Speed
+  daily: 720, // a day takes 360x as long as in Speed
 };
 
 // Real-world length of one in-game day in Speed mode
-const SPEED_DAY_MS = 2 * MINUTE;
+const SPEED_DAY_MS = MINUTE;
 
 // Real-world length of one in-game day in each mode (what the clock uses)
 export const DAY_LENGTH_MS: Record<RoomMode, number> = {

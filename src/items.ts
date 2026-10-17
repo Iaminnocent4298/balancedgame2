@@ -147,6 +147,7 @@ export type ActionKind = "attack" | "heal";
 export const ACTION_KINDS: Partial<Record<ItemTypeId, ActionKind>> = {
   weapon: "attack",
   damage_spell: "attack",
+  ultimate_spell: "attack",
   healing_spell: "heal",
 };
 
@@ -154,7 +155,9 @@ export const ACTION_KINDS: Partial<Record<ItemTypeId, ActionKind>> = {
 export const ATTACK_VERBS: Partial<Record<ItemTypeId, string>> = {
   weapon: "bonked",
   damage_spell: "spelled",
+  ultimate_spell: "exploded",
 };
+
 for (const [type, kind] of Object.entries(ACTION_KINDS)) {
   if (kind === "attack" && !ATTACK_VERBS[type as ItemTypeId]) {
     throw new Error(`Attack type "${type}" needs a verb in ATTACK_VERBS`);

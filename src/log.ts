@@ -40,19 +40,37 @@ const round2 = (v: number) => String(Math.round(v * 100) / 100);
 const pad = (n: number) => String(n).padStart(2, "0");
 
 // The message text for an entry
-export function describeEntry(entry: LogEntry): string {
+export type SegmentKind = "name" | "damage" | "heal" | "crit";
+export type Segment = { text: string; kind?: SegmentKind };
+
+// A log line as pieces, so names and amounts can be coloured separately
+export function describeParts(entry: LogEntry): Segment[] {
   switch (entry.kind) {
     case "attack":
-      return (
-        `${entry.attacker} ${entry.verb} ${entry.victim} for ${round2(entry.damage)} damage` +
-        (entry.crit ? " (critical hit!)" : "")
-      );
+      return [
+        { text: entry.attacker, kind: "name" },
+        { text: ` ${entry.verb} ` },
+        { text: entry.victim, kind: "name" },
+        { text: " for " },
+        { text: `${round2(entry.damage)} damage`, kind: "damage" },
+        ...(entry.crit ? [{ text: " (critical hit!)", kind: "crit" as const }] : []),
+      ];
     case "death":
-      return `${entry.player} has died!`;
+      return [{ text: entry.player, kind: "name" }, { text: " has died!" }];
     case "heal":
-      return `${entry.healer} healed ${entry.patient} for ${round2(entry.amount)} health`;
+      return [
+        { text: entry.healer, kind: "name" },
+        { text: " healed " },
+        { text: entry.patient, kind: "name" },
+        { text: " for " },
+        { text: `${round2(entry.amount)} health`, kind: "heal" },
+      ];
   }
 }
+
+// The same line as plain text
+export const describeEntry = (entry: LogEntry): string =>
+  describeParts(entry).map((s) => s.text).join("");
 
 export type StampStyle = "game" | "real";
 

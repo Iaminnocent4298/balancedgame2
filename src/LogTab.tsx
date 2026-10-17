@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { describeEntry, formatStamp, type StampStyle } from "./log";
+import { describeParts, formatStamp, type StampStyle } from "./log";
 import { getStartMs, type Room } from "./rooms";
 
 const STORAGE_KEY = "balancedgame.logTimestamps";
@@ -50,7 +50,11 @@ export default function LogTab({ room }: { room: Room }) {
                 <span className="log-time">
                   [{formatStamp(entry.at, style, room.mode, roomStart)}]
                 </span>
-                {describeEntry(entry)}
+                {describeParts(entry).map((seg, j) => (
+                  <span key={j} className={seg.kind ? `log-${seg.kind}` : undefined}>
+                    {seg.text}
+                  </span>
+                ))}
               </li>
             ))}
           </ol>

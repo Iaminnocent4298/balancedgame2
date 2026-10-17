@@ -21,7 +21,7 @@ export const STATS: StatDef[] = [
     id: "level", icon: "✷", label: "Level",
     description: "Gain xp by dealing damage! When levelling up, you gain ability points",
     plain: ["level", "levelXp", "nextLevelXp"],
-    fields: { level: 0, levelXp: 0, nextLevelXp: 100 },
+    fields: { level: 0, levelXp: 0, nextLevelXp: 50 },
     display: (s) => `${n(s.level)} ➩ ${n(s.level+1)} [${n(s.levelXp)}/${n(s.nextLevelXp)}]`,
   },
   {
@@ -35,7 +35,7 @@ export const STATS: StatDef[] = [
     id: "coins", icon: "$", label: "Coins",
     description: "Use coins to purchase literally anything in the shop. Gain coins by dealing damage!",
     plain: ["coins"],   // a plain value: not split into base/points/equipment
-    fields: { coins: 50 },
+    fields: { coins: 100 },
     display: (s) => n(s.coins),
   },
   {
@@ -50,7 +50,7 @@ export const STATS: StatDef[] = [
   {
     id: "healthRegen", icon: "❣", label: "Health Regen",
     description: "Health regen tick occurs at noon and midnight of each in-game day",
-    perPoint: { healthRegenRaw: 10 },
+    perPoint: { healthRegenRaw: 5 },
     fields: { healthRegenRaw: 0, healthRegenPercent: 1 },
     fieldInfo: {
         healthRegenRaw: { label: "Health Regen" },
@@ -70,8 +70,8 @@ export const STATS: StatDef[] = [
   {
     id: "manaRegen", icon: "⸎", label: "Mana Regen",
     description: "Mana regen tick occurs at noon and midnight of each in-game day",
-    perPoint: { manaRegenRaw: 5 },
-    fields: { manaRegenRaw: 0, manaRegenPercent: 1 },
+    perPoint: { manaRegenRaw: 0.5 },
+    fields: { manaRegenRaw: 5, manaRegenPercent: 1 },
     fieldInfo: {
         manaRegenRaw: { label: "Mana Regen" },
         manaRegenPercent: { label: "Mana Regen", suffix: "%" },
