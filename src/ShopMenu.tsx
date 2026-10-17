@@ -23,18 +23,23 @@ import { describeField } from "./stats";
 import StatList from "./StatList";
 import Tooltip from "./Tooltip";
 import { usePopup, type Choice } from "./usePopup";
+import { splitTables } from "./splitTables";
 
 const round = (v: number) => String(Math.round(v * 100) / 100);
 
+// A table longer than this gets split into side-by-side tables, up to the cap
+const MAX_ROWS_PER_TABLE = 8;
+const MAX_TABLES = 3;
+
 const FAILURE_TITLES: Record<PurchaseFailure, string> = {
-  cant_afford: "Can't afford that",
-  already_owned: "Already owned",
-  no_free_slot: "No free slot",
-  slots_full: "No enhancement slots",
-  nothing_to_enhance: "Nothing to enhance",
-  cant_expand: "Can't expand",
-  level_too_low: "Level too low",
-  invalid: "Not available",
+  cant_afford: "You're too broke for that LMAO",
+  already_owned: "Duplication glitch patched",
+  no_free_slot: "The greed they talk about in the bible",
+  slots_full: "Too much magic!",
+  nothing_to_enhance: "You can't enhance yourself-",
+  cant_expand: "Too powerful!",
+  level_too_low: "Still early game L",
+  invalid: "Searching for an item that doesn't exist",
 };
 
 type Row = {
@@ -75,10 +80,10 @@ function EnhancementTip({ enhancement }: { enhancement: Enhancement }) {
       <div className={`item-rarity rarity-${enhancement.rarity}`}>
         {getRarity(enhancement.rarity).label} Enhancement
       </div>
-      {enhancement.levelReq !== undefined && <div>Requires level {enhancement.levelReq}</div>}
+      {enhancement.levelReq !== undefined && <div className="stat-level">Req: ✷ {enhancement.levelReq}</div>}
       <StatList stats={enhancement.stats} />
       {enhancement.description && <p className="item-desc">{enhancement.description}</p>}
-      <div className="item-value">Value: {round(enhancement.value)} coins</div>
+      <div className="item-value stat-coins">Value: {round(enhancement.value)} coins</div>
     </div>
   );
 }
@@ -87,16 +92,12 @@ function ExpanderTip({ expander }: { expander: Expander }) {
   return (
     <div className="item-tip">
       <div className={`item-name rarity-${expander.rarity}`}>{expander.name}</div>
+      {expander.levelReq !== undefined && <div className="stat-level">Req: ✷ {expander.levelReq}</div>}
+      {expander.description && <p className="item-desc">{expander.description}</p>}
       <div className={`item-rarity rarity-${expander.rarity}`}>
         {getRarity(expander.rarity).label} Enhancement Expander
       </div>
-      {expander.levelReq !== undefined && <div>Requires level {expander.levelReq}</div>}
-      <div>
-        Adds {expander.slots} enhancement slot{expander.slots === 1 ? "" : "s"} to one weapon,
-        armour piece, or spell
-      </div>
-      {expander.description && <p className="item-desc">{expander.description}</p>}
-      <div className="item-value">Value: {round(expander.value)} coins</div>
+      <div className="item-value stat-coins">Value: {round(expander.value)} coins</div>
     </div>
   );
 }
@@ -147,7 +148,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     if (!onSale.some((e) => entryKey(e) === entryKey(entry))) {
       throw new PurchaseError(
         "invalid",
-        "That item just rotated out of the shop. Take a look at what's on sale now."
+        "You missed the sale, and now that item is gone... for now."
       );
     }
   }
@@ -162,7 +163,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
         showPopup({ title: FAILURE_TITLES[err.reason], message: err.message });
       } else {
         console.error(err);
-        showPopup({ title: "Couldn't buy", message: "Something went wrong. Please try again." });
+        showPopup({ title: "Couldn't buy", message: "Something went wrong. Please contact @iaminnocent4298 if this problem persists." });
       }
     } finally {
       setBusy(false);
@@ -207,7 +208,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     if (enhancement.levelReq !== undefined && loadout.level < enhancement.levelReq) {
       throw new PurchaseError(
         "level_too_low",
-        `${enhancement.name} requires level ${enhancement.levelReq}, but you're level ${loadout.level}.`
+        `${enhancement.name} requires level ${enhancement.levelReq}, but clearly you can't read`
       );
     }
 
@@ -215,26 +216,26 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     if (owned.length === 0) {
       throw new PurchaseError(
         "nothing_to_enhance",
-        "You don't have any gear or spells to enhance yet. Buy an item base first."
+        "You can't enhance anything... because you don't own anything LMAO"
       );
     }
     if (loadout.coins < price) {
       throw new PurchaseError(
         "cant_afford",
-        `${enhancement.name} costs ${price} coins, but you only have ${loadout.coins}.`
+        `${enhancement.name} costs ${price} coins, but you can't afford that haha`
       );
     }
     const isFull = (o: Owned) => o.applied.length >= getMaxEnhancements(o.item, o.extra);
     if (owned.every(isFull)) {
       throw new PurchaseError(
         "slots_full",
-        "All of your gear and spells already have the maximum number of enhancements."
+        "Oopsies! Everything's hypermaxed already. How have you not won the game yet?"
       );
     }
 
     const slot = await chooseOwned(owned, {
-      title: `Apply ${enhancement.name}`,
-      message: `Pick the gear or spell to enhance. It costs ${price} coins.`,
+      title: `Apply ${enhancement.name} (\$ ${price})`,
+      message: `Select the gear or spell to enhance.`,
       status: (o) => ({
         disabled: isFull(o),
         buttonLabel: isFull(o) ? "Full" : "Apply here",
@@ -255,7 +256,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     if (expander.levelReq !== undefined && loadout.level < expander.levelReq) {
       throw new PurchaseError(
         "level_too_low",
-        `${expander.name} requires level ${expander.levelReq}, but you're level ${loadout.level}.`
+        `${expander.name} requires level ${expander.levelReq}, but clearly you can't read`
       );
     }
 
@@ -263,27 +264,27 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     if (owned.length === 0) {
       throw new PurchaseError(
         "nothing_to_enhance",
-        "You don't have any gear or spells to expand yet. Buy an item base first."
+        "You can't enhance anything... because you don't own anything LMAO"
       );
     }
     if (!owned.some((o) => canExpandSlots(o.item))) {
       throw new PurchaseError(
         "cant_expand",
-        "None of your gear or spells can have more enhancement slots."
+        "Oh no, you used up all of your items' magical powers. What will you do now?"
       );
     }
     if (loadout.coins < price) {
       throw new PurchaseError(
         "cant_afford",
-        `${expander.name} costs ${price} coins, but you only have ${loadout.coins}.`
+        `${expander.name} costs ${price} coins, but you can't afford that haha`
       );
     }
 
     const slot = await chooseOwned(owned, {
-      title: `Apply ${expander.name}`,
+      title: `Apply ${expander.name} (\$ ${price})`,
       message:
-        `Pick the gear or spell to expand. It gains ${expander.slots} enhancement ` +
-        `slot${expander.slots === 1 ? "" : "s"} and costs ${price} coins.`,
+        `Pick the gear or spell to expand.` +
+        `slot${expander.slots === 1 ? "" : "s"}`,
       status: (o) =>
         canExpandSlots(o.item)
           ? { disabled: false, buttonLabel: `Add ${expander.slots}` }
@@ -342,6 +343,8 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     };
   });
 
+  const tables = splitTables(rows, MAX_ROWS_PER_TABLE, MAX_TABLES);
+
   return (
     <div>
       <div className="menu-head">
@@ -350,7 +353,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
       </div>
 
       <div className="shop-info">
-        <div className="box">
+        <div className="box stat-coins">
           {coinIcon} Coins: <strong>{round(coins)}</strong>
         </div>
         {rotating && (
@@ -360,43 +363,46 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
         )}
       </div>
 
-      <div className="table-scroll">
-        <table className="stats-table">
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Price</th>
-              <th>Purchase</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.key}>
-                <Tooltip content={row.tooltip}>
-                  <th scope="row">
-                    <span className={`rarity-${row.rarity}`}>{row.name}</span>
-                    <span className="row-tag">{row.tag}</span>
-                    {row.levelReq !== undefined && (
-                      <span
-                        className={`row-level${level < row.levelReq ? " row-level-locked" : ""}`}
-                      >
-                        Requires level {row.levelReq}
-                      </span>
-                    )}
-                  </th>
-                </Tooltip>
-                <td>
-                  {round(row.price)} {coinIcon}
-                </td>
-                <td>
-                  <button disabled={busy} onClick={() => run(row.buy)}>
-                    Buy
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="shop-tables">
+        {tables.map((chunk, i) => (
+          <div key={i} className="table-scroll">
+            <table className="stats-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Price</th>
+                  <th>Purchase</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chunk.map((row) => (
+                  <tr key={row.key}>
+                    <Tooltip content={row.tooltip}>
+                      <th scope="row">
+                        <span className={`rarity-${row.rarity}`}>{row.name}</span>
+                        {row.levelReq !== undefined && (
+                          <span
+                            className={`row-level${level < row.levelReq ? " row-level-locked" : ""}`}
+                          >
+                            Req: ✷ {row.levelReq}
+                          </span>
+                        )}
+                      </th>
+                    </Tooltip>
+                    <td className="stat-coins">
+                      {coinIcon} {round(row.price)}
+                    </td>
+                    <td>
+                      <button disabled={busy} onClick={() => run(row.buy)}>
+                        Buy
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
       </div>
     </div>
   );

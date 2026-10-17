@@ -189,6 +189,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .stat-critDamage    { color: #459bff; }
 .stat-defence       { color: #55ff55; }
 
+/* Non stat colours for tooltips */
+.stat-damage        { color: #ff5555; }
+.stat-healRaw, .stat-healPercent, .stat-maxHealth     { color: #ff6666; }
+.stat-healthRegenRaw, .stat-healthRegenPercent       { color: #ff6666; }
+.stat-manaRegenRaw, .stat-manaRegenPercent           { color: #00b0ab; }
+.stat-maxMana       { color: #00fbf4; }
+
 /* ===== Centered pages (lobby, login, signup) ===== */
 .center-page {
   flex: 1; /* fills whatever space is left under the banner and welcome bar */
@@ -274,11 +281,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 /* Rarity colours: the class is "rarity-<id>", matching the ids in items.ts.
    PLACEHOLDERS: replace with yours. */
 .rarity-common    { color: #ffffff; }
-.rarity-uncommon  { color: #a8f5a2; }
-.rarity-rare      { color: #a8d8ff; }
-.rarity-epic      { color: #ff9cf2; }
-.rarity-legendary { color: #ffe27a; }
-.rarity-mythic    { color: #ff9ec4; }
+.rarity-uncommon  { color: #55ff55; }
+.rarity-rare      { color: #459bff; }
+.rarity-epic      { color: #a234ee; }
+.rarity-legendary { color: #f28903; }
+.rarity-mythic    { color: #ff55ff; }
 
 /* ===== Equipment menus (weapon, armour, spells) ===== */
 .menu-head {
@@ -398,6 +405,15 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .row-tag { display: block; font-size: 0.75rem; opacity: 0.75; }
 .row-level { display: block; font-size: 0.75rem; }
 .row-level-locked { color: #ffc2cb; font-weight: 700; } /* shown when your level is too low */
+
+.shop-tables {
+  display: flex;
+  flex-wrap: wrap;           /* on narrow screens the tables drop below each other */
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.shop-tables .table-scroll { max-width: 100%; }
 
 /* ===== Log ===== */
 .log-bar { display: flex; justify-content: center; margin-bottom: 1rem; }

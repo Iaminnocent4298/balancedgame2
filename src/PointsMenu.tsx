@@ -41,8 +41,8 @@ export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () =>
         <h2>Modify points</h2>
       </div>
 
-      <div className="box points-ap">
-        {ap.icon} Ability Points available: <strong>{round(state.available)}</strong>
+      <div className="box points-ap stat-abilityPoints">
+        {ap.icon} Ability Points: <strong>{round(state.available)}</strong>
       </div>
 
       <div className="points-layout">

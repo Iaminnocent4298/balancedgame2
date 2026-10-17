@@ -59,17 +59,17 @@ export async function purchaseItem(uid: string, itemId: string, price: number): 
       throw candidates.length === 1
         ? new PurchaseError(
             "already_owned",
-            `You already own a ${typeLabel}. Salvage it first if you want a new one.`
+            `You already own a ${typeLabel}. Duplicate items do not in fact give double stats`
           )
         : new PurchaseError(
             "no_free_slot",
-            `All ${candidates.length} of your spell slots are full. Salvage a spell first.`
+            `All ${candidates.length} of your spell slots are full. How are you gonna mana sustain a 5th spell?`
           );
     }
     if (coins < price) {
       throw new PurchaseError(
         "cant_afford",
-        `${item.name} costs ${price} coins, but you only have ${coins}.`
+        `${item.name} costs ${price} coins, but you can't afford that haha`
       );
     }
 
@@ -110,13 +110,13 @@ export async function purchaseEnhancement(
     if (applied.length >= max) {
       throw new PurchaseError(
         "slots_full",
-        `${item.name} already has the maximum of ${max} enhancements.`
+        `${item.name} is already hypermaxed! Skill issue if you didn't add the right enhancements`
       );
     }
     if (coins < price) {
       throw new PurchaseError(
         "cant_afford",
-        `${enhancement.name} costs ${price} coins, but you only have ${coins}.`
+        `${enhancement.name} costs ${price} coins, but you can't afford that haha`
       );
     }
 
@@ -154,13 +154,13 @@ export async function purchaseExpander(
     if (!canExpandSlots(item)) {
       throw new PurchaseError(
         "cant_expand",
-        `${item.name} has no enhancement slots, so it can't be expanded.`
+        `${item.name} has no enhancement slots`
       );
     }
     if (coins < price) {
       throw new PurchaseError(
         "cant_afford",
-        `${expander.name} costs ${price} coins, but you only have ${coins}.`
+        `${expander.name} costs ${price} coins, but you can't afford that haha`
       );
     }
 

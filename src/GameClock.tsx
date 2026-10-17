@@ -37,7 +37,6 @@ export default function GameClock({ room }: { room: Room }) {
       <li>
         Month: <span className={`season-${t.season.toLowerCase()}`}>{t.month}</span>
       </li>
-      <li>Season: {t.season}</li>
       <li>
         Year: <span className="year">{t.year}</span>
       </li>

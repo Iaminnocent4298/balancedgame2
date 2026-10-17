@@ -77,21 +77,21 @@ export async function performAction(
     const actor = (await tx.get(actorRef)).data() as PlayerData | undefined;
     const target = selfTarget ? actor : ((await tx.get(targetRef)).data() as PlayerData | undefined);
 
-    if (!actor?.roomId) throw new ActionError("invalid", "You're not in a room.");
+    if (!actor?.roomId) throw new ActionError("invalid", "You're not in a room :c");
     if (!target || target.roomId !== actor.roomId) {
-      throw new ActionError("target_gone", "That player isn't in your room any more.");
+      throw new ActionError("target_gone", "That player left because they're a coward smh");
     }
 
     const roomRef = doc(db, "rooms", actor.roomId);
     const roomSnap = await tx.get(roomRef);
-    if (!roomSnap.exists()) throw new ActionError("invalid", "This room no longer exists.");
+    if (!roomSnap.exists()) throw new ActionError("invalid", "This room no longer exists :c");
 
     const room = roomSnap.data();
     const startedAt = (room.startedAt === undefined ? room.createdAt : room.startedAt) as
       | Timestamp
       | null
       | undefined;
-    if (!startedAt) throw new ActionError("not_started", "The game hasn't started yet.");
+    if (!startedAt) throw new ActionError("not_started", "The game hasn't started yet, be patient... gosh");
     const mode = room.mode as RoomMode;
     const now = Date.now();
     const tick = getRegenTick(mode, startedAt.toMillis(), now);
@@ -115,7 +115,7 @@ export async function performAction(
     const targetStartHealth = targetVitals.health;
 
     if (actorVitals.health <= 0) {
-      throw new ActionError("actor_dead", "You're dead, so you can't do that. You can only spectate.");
+      throw new ActionError("actor_dead", "You're dead. This isn't BOTC, so you can only spectate.");
     }
 
     // The item being used, and what it does
@@ -123,7 +123,7 @@ export async function performAction(
     const enhancements = actor.enhancements ?? {};
     const item = ITEMS[equipment[slot] ?? ""];
     if (!item || !slotAccepts(slot, item.type)) {
-      throw new ActionError("no_item", "That item is no longer equipped.");
+      throw new ActionError("no_item", "That item has vanished... just kidding you removed it yourself");
     }
     const kind = ACTION_KINDS[item.type];
     if (!kind) throw new ActionError("invalid", `${item.name} can't be used yet.`);
@@ -138,11 +138,10 @@ export async function performAction(
       );
     }
 
-    const targetName = target.name ?? "That player";
     if (targetVitals.health <= 0) {
       throw new ActionError(
         "target_down",
-        kind === "heal" ? `${targetName} is down and can't be healed.` : `${targetName} is already down.`
+        kind === "heal" ? `Healing them is no use, they're already dead.` : `Why would you attack a dead player?`
       );
     }
 
@@ -150,7 +149,7 @@ export async function performAction(
     if (actorVitals.mana < manaCost) {
       throw new ActionError(
         "not_enough_mana",
-        `${item.name} costs ${manaCost} mana, but you only have ${actorVitals.mana}.`
+        `${item.name} costs ${manaCost} mana, which is clearly too much for your current mana bar`
       );
     }
 
@@ -166,13 +165,13 @@ export async function performAction(
       const { raw, percent } = getHealing(slot, equipment, enhancements);
       const maxHealth = Math.max(1, theirs.maxHealth.total);
       const amount = raw + (maxHealth * percent) / 100;
-      if (!(amount > 0)) throw new ActionError("invalid", `${item.name} doesn't heal anything.`);
+      if (!(amount > 0)) throw new ActionError("invalid", `That item doesn't perform healing capabilities`);
 
       const newHealth = round2(Math.min(maxHealth, targetVitals.health + amount));
       const healed = round2(newHealth - targetVitals.health);
       if (healed <= 0) {
         // Refused before anything is charged, so no mana is wasted
-        throw new ActionError("nothing_to_heal", `${targetName} is already at full health.`);
+        throw new ActionError("nothing_to_heal", `They're already at max hp, why would you heal them?`);
       }
 
       targetVitals.health = newHealth;

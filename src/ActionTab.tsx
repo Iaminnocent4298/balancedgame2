@@ -42,7 +42,7 @@ const COLUMNS: { title: string; buttons: { label: string; view?: View }[] }[] = 
     buttons: [
       { label: "Gear", view: "gear" },
       { label: "Spells", view: "spells" },
-      { label: "Misc" },
+      { label: "COMING SOON" },
     ],
   },
   {
@@ -91,8 +91,8 @@ export default function ActionTab({
 
     if (options.length === 0) {
       showPopup({
-        title: "Nothing to use",
-        message: "Equip a weapon or a spell first. You can buy item bases in the shop.",
+        title: "What are you gonna attack with-",
+        message: "Purchase a weapon or a spell first silly :3",
       });
       return;
     }
@@ -127,7 +127,7 @@ export default function ActionTab({
 
     const chosen = await choosePopup<SlotId>({
       title: `Use on ${targetId === uid ? "yourself" : targetName}`,
-      message: "Pick a weapon or spell.",
+      message: "Pick your method of attack (or heal):",
       groups,
     });
 
@@ -145,7 +145,7 @@ export default function ActionTab({
       if (r.kind === "attack" && r.levelsGained > 0) {
         const n = r.levelsGained;
         showPopup({
-          title: "Level up!",
+          title: "Level up, woahhhhhhh",
           message:
             `You levelled up ${n} ${n === 1 ? "time" : "times"} and gained ` +
             `${r.apGained} ability ${r.apGained === 1 ? "point" : "points"}.`,
@@ -156,7 +156,7 @@ export default function ActionTab({
         showPopup({ title: ACTION_FAILURE_TITLES[err.reason], message: err.message });
       } else {
         console.error(err);
-        showPopup({ title: "Action failed", message: "Something went wrong. Please try again." });
+        showPopup({ title: "Action failed", message: "Something went wrong. Contact @iaminnocent4298 if this error persists." });
       }
     } finally {
       setBusy(false);

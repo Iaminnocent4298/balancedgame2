@@ -8,7 +8,7 @@ import {
 export default function RoomLobby({ uid, extra }: { uid: string; extra?: ReactNode }) {
   const [name, setName] = useState("");
   const [mode, setMode] = useState<RoomMode>(ROOM_MODES[0].id);
-  const [maxPlayers, setMaxPlayers] = useState(4);
+  const [maxPlayers, setMaxPlayers] = useState(6);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);

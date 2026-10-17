@@ -21,19 +21,16 @@ export default function ItemTooltip({ item, enhancements, extraSlots }: Props) {
   return (
     <div className="item-tip">
       <div className={`item-name rarity-${item.rarity}`}>{item.name}</div>
-      <div className={`item-rarity rarity-${item.rarity}`}>
-        {getRarity(item.rarity).label} {getItemType(item.type).label}
-      </div>
 
-      {item.levelReq !== undefined && <div>Requires level {item.levelReq}</div>}
+      {item.levelReq !== undefined && <div className="stat-level">Req: ✷ {item.levelReq}</div>}
+      
+      <StatList stats={item.stats} />
 
       {item.manaCost !== undefined && (
         <div className="item-mana">
           {describeField("mana").icon} Mana cost: {item.manaCost}
         </div>
       )}
-      
-      <StatList stats={item.stats} />
 
       {max > 0 &&
         (enhancements === undefined ? (
@@ -49,15 +46,16 @@ export default function ItemTooltip({ item, enhancements, extraSlots }: Props) {
                 <StatList stats={e.stats} />
               </div>
             ))}
-            {applied.length < max && (
-              <div className="item-enh-empty">Empty slots: {max - applied.length}</div>
-            )}
           </div>
         ))}
 
       {item.description && <p className="item-desc">{item.description}</p>}
 
-      <div className="item-value">Value: {round(item.value)} coins</div>
+      <div className={`item-rarity rarity-${item.rarity}`}>
+        {getRarity(item.rarity).label} {getItemType(item.type).label}
+      </div>
+
+      <div className="item-value stat-coins">Value: $ {round(item.value)}</div>
     </div>
   );
 }

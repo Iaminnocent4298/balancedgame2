@@ -25,7 +25,7 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
   // undefined = loading, null = room doesn't exist
   const [room, setRoom] = useState<Room | null | undefined>(undefined);
   const [players, setPlayers] = useState<RoomPlayer[] | undefined>(undefined);
-  const [copied, setCopied] = useState(false);
+  // const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
   const [tab, setTab] = useState<TabId>("stats");
 
@@ -55,11 +55,11 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
   const dead = isDead(players?.find((p) => p.id === uid)?.stats);
   const deadIds = new Set((players ?? []).filter((p) => isDead(p.stats)).map((p) => p.id));
 
-  async function copyCode() {
-    await navigator.clipboard.writeText(room!.id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
+  // async function copyCode() {
+  //   await navigator.clipboard.writeText(room!.id);
+  //   setCopied(true);
+  //   setTimeout(() => setCopied(false), 1500);
+  // }
 
   async function handleStart() {
     setStarting(true);
@@ -68,7 +68,7 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
     } catch (err) {
       showPopup({
         title: "Couldn't start",
-        message: err instanceof Error ? err.message : "Something went wrong.",
+        message: err instanceof Error ? err.message : "Something went wrong. Contact @iaminnocent4298 if this error persists.",
       });
     } finally {
       setStarting(false);
@@ -85,7 +85,6 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
             <li>Name: {room.name}</li>
             <li>
               Code: <strong className="room-code">{room.id}</strong>{" "}
-              <button onClick={copyCode}>{copied ? "Copied!" : "Copy"}</button>
             </li>
             <li>Type: {modeLabel}</li>
             <li>

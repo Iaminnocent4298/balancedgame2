@@ -12,10 +12,12 @@ export default function StatList({ stats }: { stats?: ItemStats }) {
       {entries.map(([key, amount]) => {
         const { icon, label, suffix } = describeField(key);
         return (
-          <li key={key} className={amount > 0 ? "item-stat-up" : "item-stat-down"}>
-            {icon} {label}: {amount > 0 ? "+" : "-"}
+          <li key={key}>
+            <span className={`stat-${key}`}>{icon} {(key === "healthRegenPercent" || key === "manaRegenPercent") ? label + suffix : label}</span>: 
+            <span className={amount > 0 ? "item-stat-up" : "item-stat-down"}> {amount > 0 ? "+" : "-"}
             {round(Math.abs(amount))}
             {suffix}
+            </span>
           </li>
         );
       })}

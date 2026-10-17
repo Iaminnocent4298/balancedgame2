@@ -29,14 +29,15 @@ export function defineExpanders(list: Expander[]): Record<string, Expander> {
 
 export const EXPANDERS = defineExpanders([
   {
-    id: "minor_expander", name: "Minor Expander", rarity: "uncommon", value: 60, slots: 1,
-    description: "A little extra room to work with.",
+    id: "t1_expander", name: "Expander +1", rarity: "rare", value: 100, slots: 1, levelReq: 3,
+    description: "Adds 1 enhancement slot"
   },
   {
-    id: "expander", name: "Expander", rarity: "rare", value: 150, slots: 2, levelReq: 5,
+    id: "t2_expander", name: "Expander +2", rarity: "epic", value: 250, slots: 2, levelReq: 8,
+    description: "Adds 2 enhancement slots"
   },
   {
-    id: "grand_expander", name: "Grand Expander", rarity: "epic", value: 350, slots: 3, levelReq: 10,
-    description: "Carves out space where there was none.",
+    id: "t3_expander", name: "Expander +3", rarity: "legendary", value: 500, slots: 3, levelReq: 13,
+    description: "Adds 3 enhancement slots",
   },
 ]);
