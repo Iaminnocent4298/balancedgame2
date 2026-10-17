@@ -19,6 +19,7 @@ async function syncRegen(uid: string, mode: RoomMode, startMs: number) {
     tx.update(playerRef, {
       "stats.health": regen.health,
       "stats.mana": regen.mana,
+      "stats.coins": regen.coins,
       regenTick: regen.tick,
     });
   });

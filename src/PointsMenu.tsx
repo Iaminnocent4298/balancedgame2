@@ -1,18 +1,24 @@
-import { useEffect, useState } from "react";
-import { changePoints, subscribeToPoints, type PointsState } from "./points";
-import { POINT_RATES, STATS, describeField } from "./stats";
+import { changePoints, type PointsState } from "./points";
+import { POINT_RATES, STATS, describeField, withDefaults } from "./stats";
 import { getDisplayStats } from "./statCalc";
 import Tooltip from "./Tooltip";
+import { useRoomData } from "./useRoomData";
 
 const round = (v: number) => String(Math.round(v * 100) / 100);
 
 export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () => void }) {
   // undefined = still loading
-  const [state, setState] = useState<PointsState | undefined>(undefined);
+  const { me } = useRoomData();
 
-  useEffect(() => subscribeToPoints(uid, setState), [uid]);
+  if (!me) return <p>Loading...</p>;
 
-  if (!state) return <p>Loading...</p>;
+  const state: PointsState = {
+    available: withDefaults(me.stats).abilityPoints,
+    spent: me.points ?? {},
+    stats: me.stats,
+    equipment: me.equipment,
+    enhancements: me.enhancements,
+  };
 
   const ap = describeField("abilityPoints");
   // Same totals as the Stats tab: base + points + equipment

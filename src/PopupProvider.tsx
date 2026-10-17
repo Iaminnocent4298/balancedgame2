@@ -18,6 +18,20 @@ export default function PopupProvider({ children }: { children: ReactNode }) {
   // How to answer the open popup if it's dismissed (false for confirm, null for choice)
   const cancelPending = useRef<(() => void) | null>(null);
 
+  // Choices can be locked until a certain time (such as a weapon cooldown). This clock
+  // lets them unlock by themselves while the popup is open.
+  const [now, setNow] = useState(() => Date.now());
+  const hasTimedChoice =
+    active?.kind === "choice" &&
+    active.options.groups.some((g) => g.choices.some((c) => c.lockedUntil !== undefined));
+
+  useEffect(() => {
+    if (!hasTimedChoice) return;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [hasTimedChoice]);
+
   const open = useCallback((next: Active) => {
     // Remember what had focus, so we can give it back when the popup closes
     if (!previousFocus.current && document.activeElement instanceof HTMLElement) {
@@ -129,22 +143,32 @@ export default function PopupProvider({ children }: { children: ReactNode }) {
                     {group.title && <h3>{group.title}</h3>}
                     <div className="popup-row">
                       {group.choices.map((choice, i) => {
+                        const locked = choice.lockedUntil !== undefined && choice.lockedUntil > now;
+                        const disabled = Boolean(choice.disabled) || locked;
                         const pick = () => {
-                          if (!choice.disabled) finish(() => active.resolve(choice.value));
+                          // Re-checked at the moment of the click, not just at the last tick
+                          const stillLocked =
+                            choice.lockedUntil !== undefined && choice.lockedUntil > Date.now();
+                          if (!choice.disabled && !stillLocked) {
+                            finish(() => active.resolve(choice.value));
+                          }
                         };
                         const card = (
                           <div
-                            className={`choice-card${choice.disabled ? " choice-card-disabled" : ""}`}
+                            className={`choice-card${disabled ? " choice-card-disabled" : ""}`}
                             onClick={pick}
                           >
                             {choice.label}
-                            <button className="choice-pick" disabled={choice.disabled}>
-                              {choice.buttonLabel ?? "Choose"}
+                            <button className="choice-pick" disabled={disabled}>
+                              {locked
+                                ? (choice.lockedLabel ?? "Locked")
+                                : (choice.buttonLabel ?? "Choose")}
                             </button>
                           </div>
                         );
-                        return choice.tooltip ? (
-                          <Tooltip key={i} content={choice.tooltip}>{card}</Tooltip>
+                        const tip = locked ? (choice.lockedTooltip ?? choice.tooltip) : choice.tooltip;
+                        return tip ? (
+                          <Tooltip key={i} content={tip}>{card}</Tooltip>
                         ) : (
                           <Fragment key={i}>{card}</Fragment>
                         );

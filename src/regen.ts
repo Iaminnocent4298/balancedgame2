@@ -26,16 +26,19 @@ export type RegenSubject = {
   regenTick?: number | null; // the last tick this player has been paid up to
 };
 
-export type RegenResult = { health: number; mana: number; tick: number };
+export type RegenResult = { health: number; mana: number; coins: number; tick: number };
 
 // Applies every tick that has happened since the player's last one.
-// Returns null if none are due. Dead players don't regen, but their tick still advances.
+// Returns null if none are due. Dead players don't regen or earn coins,
+// but their tick still advances.
 export function computeRegen(player: RegenSubject, currentTick: number): RegenResult | null {
   const missed = currentTick - (player.regenTick ?? 0);
   if (missed <= 0) return null;
 
   const stats = withDefaults(player.stats);
-  if (stats.health <= 0) return { health: stats.health, mana: stats.mana, tick: currentTick };
+  if (stats.health <= 0) {
+    return { health: stats.health, mana: stats.mana, coins: stats.coins, tick: currentTick };
+  }
 
   const t = getBreakdowns(player.stats, player.points, player.equipment, player.enhancements);
 
@@ -55,10 +58,14 @@ export function computeRegen(player: RegenSubject, currentTick: number): RegenRe
     Math.round(t.manaRegenRaw.total + (maxManaExact * t.manaRegenPercent.total) / 100)
   );
 
+  // Coins are whole numbers too: coin gain rounds to the nearest whole coin per tick
+  const coinsPerTick = Math.max(0, Math.round(t.coinGain.total));
+
   // Math.min is the overflow guard. It also trims a value that was already over the max
   return {
     health: round2(Math.min(maxHealth, stats.health + missed * healthPerTick)),
     mana: Math.floor(Math.min(maxMana, stats.mana + missed * manaPerTick)),
+    coins: stats.coins + missed * coinsPerTick,
     tick: currentTick,
   };
 }

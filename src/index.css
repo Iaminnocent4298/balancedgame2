@@ -180,6 +180,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .stat-level         { color: #fe96f9; }
 .stat-abilityPoints { color: #00fd3b; }
 .stat-coins         { color: #fba800; }
+.stat-coinGain      { color: #ffe9a0; }
 .stat-health        { color: #ff6666; }
 .stat-healthRegen   { color: #ff6666; }
 .stat-mana          { color: #00fbf4; }

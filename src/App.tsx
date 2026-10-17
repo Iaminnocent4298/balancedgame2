@@ -9,6 +9,7 @@ import AuthForm from "./AuthForm";
 import RoomLobby from "./RoomLobby";
 import RoomView from "./RoomView";
 import SpectateView from "./SpectateView";
+import RoomDataProvider from "./RoomDataProvider";
 
 const BANNER = `${import.meta.env.BASE_URL}banner.png`;
 const LOGO = `${import.meta.env.BASE_URL}logo.png`;
@@ -82,13 +83,13 @@ export default function App() {
       {!inRoomView && <img className="banner" src={BANNER} alt="Balanced Game" />}
 
       {inRoom ? (
-        <RoomView uid={user.uid} roomId={player.roomId!} />
+        <RoomDataProvider roomId={player.roomId!} uid={user.uid}>
+          <RoomView uid={user.uid} roomId={player.roomId!} />
+        </RoomDataProvider>
       ) : spectatingId ? (
-        <SpectateView
-          uid={user.uid}
-          roomId={spectatingId}
-          onExit={() => setSpectating(null)}
-        />
+        <RoomDataProvider roomId={spectatingId} uid={user.uid}>
+          <SpectateView uid={user.uid} onExit={() => setSpectating(null)} />
+        </RoomDataProvider>
       ) : (
         <RoomLobby
           uid={user.uid}

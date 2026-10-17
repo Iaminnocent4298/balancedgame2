@@ -1,8 +1,5 @@
-import { useEffect, useState } from "react";
-import {
-  ROOM_MODES, getStartMs, leaveRoom, startGame, subscribeToRoom, subscribeToRoomPlayers,
-  type Room, type RoomPlayer,
-} from "./rooms";
+import { useState } from "react";
+import { ROOM_MODES, getStartMs, leaveRoom, startGame } from "./rooms";
 import { isDead } from "./stats";
 import GameClock from "./GameClock";
 import StatsTab from "./StatsTab";
@@ -10,7 +7,7 @@ import ActionTab from "./ActionTab";
 import LogTab from "./LogTab";
 import ChangelogTab from "./ChangelogTab";
 import { usePopup } from "./usePopup";
-import { useRegen } from "./useRegen";
+import { useRoomData } from "./useRoomData";
 
 const TABS = [
   { id: "stats", label: "Stats" },
@@ -23,18 +20,11 @@ type TabId = (typeof TABS)[number]["id"];
 export default function RoomView({ uid, roomId }: { uid: string; roomId: string }) {
   const { showPopup } = usePopup();
   // undefined = loading, null = room doesn't exist
-  const [room, setRoom] = useState<Room | null | undefined>(undefined);
-  const [players, setPlayers] = useState<RoomPlayer[] | undefined>(undefined);
   // const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
   const [tab, setTab] = useState<TabId>("stats");
 
-  useEffect(() => subscribeToRoom(roomId, setRoom), [roomId]);
-  useEffect(() => subscribeToRoomPlayers(roomId, setPlayers), [roomId]);
-
-  // Collects your own health and mana regen as each tick comes due
-  const me = players?.find((p) => p.id === uid);
-  useRegen(uid, room, me ? (me.regenTick ?? 0) : null);
+  const { room, players } = useRoomData();
 
   if (room === undefined) return <p>Loading room...</p>;
   if (room === null) {
@@ -152,7 +142,7 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
           </nav>
 
           <main role="tabpanel">
-            {tab === "stats" && <StatsTab room={room} uid={uid} />}
+            {tab === "stats" && <StatsTab uid={uid} />}
             {tab === "action" &&
               (dead ? (
                 <p className="dead-note">

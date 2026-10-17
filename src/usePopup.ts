@@ -18,7 +18,11 @@ export type Choice<T> = {
   label: ReactNode; // the card's content
   buttonLabel?: string; // the card's button text. Defaults to "Choose"
   tooltip?: ReactNode; // optional hover tooltip
-  disabled?: boolean; // greyed out and can't be picked
+  disabled?: boolean; // permanently greyed out and can't be picked
+  // Locked until this time (ms since 1970), then unlocks by itself while the popup is open
+  lockedUntil?: number;
+  lockedLabel?: string; // button text while locked. Defaults to "Locked"
+  lockedTooltip?: ReactNode; // tooltip shown only while locked
 };
 
 export type ChoiceGroup<T> = {

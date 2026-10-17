@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ENHANCEMENTS } from "./enhancementCatalog";
 import type { Enhancement } from "./enhancements";
-import { getLoadout, subscribeToLoadout, type Loadout } from "./equipment";
+import type { Loadout } from "./equipment";
+import { collectRegen } from "./collectRegen";
+import { useRoomData } from "./useRoomData";
 import { EXPANDERS, type Expander } from "./expanderCatalog";
 import { formatCountdown } from "./format";
 import { getSeasonInfo } from "./gameClock";
@@ -109,11 +111,10 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
   const rotating = isRotating(shop);
   const { showPopup, choosePopup } = usePopup();
   // undefined = still loading
-  const [wallet, setWallet] = useState<Loadout | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => subscribeToLoadout(uid, setWallet), [uid]);
+  const { loadout: wallet } = useRoomData(); // undefined while loading
 
   // Only rotating shops need a ticking clock (local only, no network use)
   useEffect(() => {
@@ -137,6 +138,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
   if (!wallet) return <p>Loading...</p>;
 
   const { coins, level } = wallet;
+  const current = wallet; // your gear and coins, already including any regen that's due
   const coinIcon = describeField("coins").icon;
 
   // Rechecked at the moment of purchase, in case the stock rotated while the player was deciding
@@ -203,7 +205,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
   async function buyEnhancement(entry: ShopEntry, price: number) {
     assertOnSale(entry);
     const enhancement = ENHANCEMENTS[entry.id];
-    const loadout = await getLoadout(uid);
+    const loadout = current;
 
     if (enhancement.levelReq !== undefined && loadout.level < enhancement.levelReq) {
       throw new PurchaseError(
@@ -244,6 +246,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     if (!slot) return; // cancelled
 
     assertOnSale(entry); // the stock may have rotated while the popup was open
+    await collectRegen(uid, room);
     await purchaseEnhancement(uid, entry.id, price, slot);
   }
 
@@ -251,7 +254,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
   async function buyExpander(entry: ShopEntry, price: number) {
     assertOnSale(entry);
     const expander = EXPANDERS[entry.id];
-    const loadout = await getLoadout(uid);
+    const loadout = current;
 
     if (expander.levelReq !== undefined && loadout.level < expander.levelReq) {
       throw new PurchaseError(
@@ -293,6 +296,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     if (!slot) return; // cancelled
 
     assertOnSale(entry);
+    await collectRegen(uid, room);
     await purchaseExpander(uid, entry.id, price, slot);
   }
 
@@ -311,6 +315,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
         price,
         buy: async () => {
           assertOnSale(entry);
+          await collectRegen(uid, room);
           await purchaseItem(uid, entry.id, price);
         },
       };

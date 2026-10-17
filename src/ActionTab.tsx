@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useRoomData } from "./useRoomData";
 import type { Room } from "./rooms";
 import { ACTION_KINDS, GEAR_SLOTS, SLOTS, SPELL_SLOTS, slotAccepts, type SlotId } from "./items";
 import { ITEMS } from "./itemCatalog";
-import { subscribeToLoadout, type Loadout } from "./equipment";
 import { ActionError, performAction, type ActionFailure } from "./action";
 import Countdown from "./Countdown";
 import EquipmentMenu from "./EquipmentMenu";
@@ -61,17 +61,12 @@ export default function ActionTab({
 }: { room: Room; uid: string; deadIds: Set<string> }) {
   const { showPopup, choosePopup } = usePopup();
   const [view, setView] = useState<View>("main");
-  // undefined = still loading
-  const [loadout, setLoadout] = useState<Loadout | undefined>(undefined);
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => subscribeToLoadout(uid, setLoadout), [uid]);
+  const { loadout } = useRoomData(); // undefined while loading
 
   async function handleAction(targetId: string, targetName: string) {
     if (!loadout) return;
 
-    // 0) What the player can use: the equipped weapon and any attack or healing spells
-    const now = Date.now();
     const options = SLOTS.flatMap(({ id: slot }) => {
       const itemId = loadout.equipment[slot];
       const item = itemId ? ITEMS[itemId] : undefined;
@@ -99,20 +94,19 @@ export default function ActionTab({
 
     const toChoice = ({
       slot, item, kind, applied, extra, readyAt,
-    }: (typeof options)[number]): Choice<SlotId> => {
-      const cooling = readyAt > now;
-      return {
-        value: slot,
-        disabled: cooling,
-        buttonLabel: cooling ? "On cooldown" : kind === "heal" ? "Heal" : "Attack",
-        tooltip: cooling ? (
-          <>
-            On cooldown: <Countdown until={readyAt} /> remaining
-          </>
-        ) : undefined,
-        label: <ItemTooltip item={item} enhancements={applied} extraSlots={extra} />,
-      };
-    };
+    }: (typeof options)[number]): Choice<SlotId> => ({
+      value: slot,
+      buttonLabel: kind === "heal" ? "Heal" : "Attack",
+      // The popup unlocks the card by itself when this time passes
+      lockedUntil: readyAt > 0 ? readyAt : undefined,
+      lockedLabel: "On cooldown",
+      lockedTooltip: (
+        <>
+          On cooldown: <Countdown until={readyAt} /> remaining
+        </>
+      ),
+      label: <ItemTooltip item={item} enhancements={applied} extraSlots={extra} />,
+    });
 
     const groups = [
       {

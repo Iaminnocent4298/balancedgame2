@@ -83,20 +83,20 @@ export const ITEMS = defineItems([
   // ----- Spells -----
   {
     id: "t1_heal", name: "T1 Healing Spell", type: "healing_spell",
-    rarity: "uncommon", value: 30, levelReq: 2, enhancementSlots: 2,
-    manaCost: 25,
+    rarity: "uncommon", value: 30, levelReq: 2, enhancementSlots: 0,
+    manaCost: 20,
     stats: { healRaw: 100 },
   },
   {
     id: "t2_heal", name: "T2 Healing Spell", type: "healing_spell",
-    rarity: "rare", value: 75, levelReq: 6, enhancementSlots: 3,
-    manaCost: 35,
+    rarity: "rare", value: 75, levelReq: 6, enhancementSlots: 0,
+    manaCost: 30,
     stats: { healRaw: 250, healPercent: 2.5 },
   },
   {
     id: "t3_heal", name: "T3 Healing Spell", type: "healing_spell",
-    rarity: "epic", value: 150, levelReq: 10, enhancementSlots: 4,
-    manaCost: 50,
+    rarity: "epic", value: 150, levelReq: 10, enhancementSlots: 0,
+    manaCost: 45,
     stats: { healRaw: 500, healPercent: 5 },
   },
   {
@@ -164,8 +164,8 @@ export const ITEMS = defineItems([
   },
   {
     id: "basic_heal", name: "Basic Healing Spell", type: "healing_spell",
-    rarity: "common", value: 15, enhancementSlots: 1,
-    manaCost: 25,
+    rarity: "common", value: 15, enhancementSlots: 0,
+    manaCost: 15,
     stats: { healRaw: 50 },
   },
   {

@@ -39,6 +39,12 @@ export const STATS: StatDef[] = [
     display: (s) => n(s.coins),
   },
   {
+    id: "coinGain", icon: "⤴", label: "Coin Gain",
+    description: "Coins are earned every 12 in-game hours. Increase coin gain by applying enhancements",
+    fields: { coinGain: 2 },
+    display: (s) => n(s.coinGain),
+  },
+  {
     id: "health", icon: "❤", label: "Health",
     description: "If this stat is 0 then you're dead",
     plain: ["health"],
@@ -88,7 +94,7 @@ export const STATS: StatDef[] = [
   {
     id: "critChance", icon: "✦", label: "Crit Chance",
     description: "Crit Chance is the percentage chance you deal a critical hit",
-    perPoint: { critChance: 0.25 },
+    perPoint: { critChance: 0.5 },
     fields: { critChance: 0 },
     fieldInfo: { critChance: { suffix: "%" } },
     display: (s) => `${n(s.critChance)}%`,
@@ -125,6 +131,14 @@ for (const key of PLAIN) {
 }
 export const COMPOSITE_FIELDS = Object.keys(DEFAULT_STATS).filter((k) => !PLAIN.has(k));
 
+// Fields that ONLY enhancements may modify: items can't, and points can't be spent on them
+export const ENHANCEMENT_ONLY_FIELDS = ["coinGain"];
+for (const key of ENHANCEMENT_ONLY_FIELDS) {
+  if (!COMPOSITE_FIELDS.includes(key)) {
+    throw new Error(`"${key}" is listed as enhancement-only but isn't a modifiable stat field`);
+  }
+}
+
 // Fields players can spend ability points on: field -> stat gained per point
 export const POINT_RATES: Record<string, number> = {};
 for (const def of STATS) {
@@ -133,6 +147,9 @@ for (const def of STATS) {
       throw new Error(`"perPoint" lists a field that can't take points: ${key}`);
     }
     if (!(rate > 0)) throw new Error(`"perPoint" rate for ${key} must be above 0`);
+    if (ENHANCEMENT_ONLY_FIELDS.includes(key)) {
+      throw new Error(`"perPoint" can't include enhancement-only field: ${key}`);
+    }
     POINT_RATES[key] = rate;
   }
 }

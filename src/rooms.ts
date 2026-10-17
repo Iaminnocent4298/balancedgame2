@@ -4,7 +4,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { DEFAULT_STATS, type Stats } from "./stats";
-import type { Enhancements, Equipment } from "./equipment";
+import type { Cooldowns, Enhancements, Equipment, ExtraSlots } from "./equipment";
 import type { LogEntry } from "./log";
 
 export const ROOM_MODES = [
@@ -205,6 +205,8 @@ export type RoomPlayer = {
   points: Stats | null;
   equipment: Equipment | null;
   enhancements: Enhancements | null;
+  cooldowns: Cooldowns | null;
+  extraSlots: ExtraSlots | null;
   regenTick: number | null;
 };
 
@@ -223,6 +225,8 @@ export function subscribeToRoomPlayers(
         points: (d.data().points as Stats | undefined) ?? null,
         equipment: (d.data().equipment as Equipment | undefined) ?? null,
         enhancements: (d.data().enhancements as Enhancements | undefined) ?? null,
+        cooldowns: (d.data().cooldowns as Cooldowns | undefined) ?? null,
+        extraSlots: (d.data().extraSlots as ExtraSlots | undefined) ?? null,
         regenTick: (d.data().regenTick as number | undefined) ?? null,
       }))
     )

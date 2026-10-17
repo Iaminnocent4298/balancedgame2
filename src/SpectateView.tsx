@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { ROOM_MODES, getStartMs, subscribeToRoom, type Room } from "./rooms";
+import { useState } from "react";
+import { ROOM_MODES, getStartMs } from "./rooms";
+import { useRoomData } from "./useRoomData";
 import GameClock from "./GameClock";
 import StatsTab from "./StatsTab";
 import LogTab from "./LogTab";
@@ -10,14 +11,11 @@ const TABS = [
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
 
-type Props = { uid: string; roomId: string; onExit: () => void };
+type Props = { uid: string; onExit: () => void };
 
-export default function SpectateView({ uid, roomId, onExit }: Props) {
-  // undefined = loading, null = room doesn't exist (any more)
-  const [room, setRoom] = useState<Room | null | undefined>(undefined);
+export default function SpectateView({ uid, onExit }: Props) {
+  const { room } = useRoomData();
   const [tab, setTab] = useState<TabId>("stats");
-
-  useEffect(() => subscribeToRoom(roomId, setRoom), [roomId]);
 
   if (room === undefined) return <p>Loading room...</p>;
   if (room === null) {
@@ -80,7 +78,7 @@ export default function SpectateView({ uid, roomId, onExit }: Props) {
       </nav>
 
       <main role="tabpanel">
-        {tab === "stats" && <StatsTab room={room} uid={uid} />}
+        {tab === "stats" && <StatsTab uid={uid} />}
         {tab === "log" && <LogTab room={room} />}
       </main>
     </div>

@@ -1,4 +1,4 @@
-import { ITEM_MODIFIABLE_FIELDS } from "./stats";
+import { ENHANCEMENT_ONLY_FIELDS, ITEM_MODIFIABLE_FIELDS } from "./stats";
 
 // ===== Rarities: ordered lowest to highest. Add or rename here. =====
 export const RARITIES = [
@@ -85,6 +85,9 @@ export function defineItems(list: Item[]): Record<string, Item> {
     for (const key of Object.keys(item.stats ?? {})) {
       if (!ITEM_MODIFIABLE_FIELDS.includes(key)) {
         throw new Error(`Item "${item.id}" can't modify "${key}" (unknown or not modifiable)`);
+      }
+      if (ENHANCEMENT_ONLY_FIELDS.includes(key)) {
+        throw new Error(`Item "${item.id}" can't modify "${key}": only enhancements can`);
       }
     }
     out[item.id] = item;
