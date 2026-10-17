@@ -100,6 +100,8 @@ export async function createRoom(
           roomId: code,
           stats: { ...DEFAULT_STATS },
           points: {},
+          pointsChangedAt: deleteField(),
+          pointsChangedLevel: deleteField(),
           equipment: {},
           enhancements: {},
           cooldowns: {},
@@ -143,6 +145,8 @@ export async function joinRoom(uid: string, rawCode: string) {
       roomId: code,
       stats: { ...DEFAULT_STATS },
       points: {},
+      pointsChangedAt: deleteField(),
+      pointsChangedLevel: deleteField(),
       equipment: {},
       enhancements: {},
       cooldowns: {},
@@ -179,6 +183,8 @@ export async function leaveRoom(uid: string) {
       roomId: null,
       stats: deleteField(),
       points: deleteField(),
+      pointsChangedAt: deleteField(),
+      pointsChangedLevel: deleteField(),
       equipment: deleteField(),
       enhancements: deleteField(),
       cooldowns: deleteField(),
@@ -203,6 +209,8 @@ export type RoomPlayer = {
   name: string;
   stats: Stats | null;
   points: Stats | null;
+  pointsChangedAt?: number;
+  pointsChangedLevel?: number;
   equipment: Equipment | null;
   enhancements: Enhancements | null;
   cooldowns: Cooldowns | null;
@@ -223,6 +231,8 @@ export function subscribeToRoomPlayers(
         name: d.data().name ?? "Player",
         stats: (d.data().stats as Stats | undefined) ?? null,
         points: (d.data().points as Stats | undefined) ?? null,
+        pointsChangedAt: d.data().pointsChangedAt as number | undefined,
+        pointsChangedLevel: d.data().pointsChangedLevel as number | undefined,
         equipment: (d.data().equipment as Equipment | undefined) ?? null,
         enhancements: (d.data().enhancements as Enhancements | undefined) ?? null,
         cooldowns: (d.data().cooldowns as Cooldowns | undefined) ?? null,
@@ -264,5 +274,12 @@ export function subscribeToAllRooms(
         }))
       ),
     (err) => onError?.(err)
+  );
+}
+
+// You first, then everyone else alphabetically
+export function youFirst<T extends { id: string; name: string }>(list: T[], uid: string): T[] {
+  return [...list].sort((a, b) =>
+    a.id === uid ? -1 : b.id === uid ? 1 : a.name.localeCompare(b.name)
   );
 }

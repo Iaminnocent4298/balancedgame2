@@ -1,5 +1,6 @@
 import { getGameTime } from "./gameClock";
 import type { RoomMode } from "./rooms";
+import { formatNumber as round2, pad } from "./format";
 
 export const LOG_LIMIT = 50; // oldest entries are dropped beyond this
 
@@ -36,9 +37,6 @@ export function pushLog(log: LogEntry[] | undefined, entry: LogEntry): LogEntry[
   return [entry, ...(log ?? [])].slice(0, LOG_LIMIT);
 }
 
-const round2 = (v: number) => String(Math.round(v * 100) / 100);
-const pad = (n: number) => String(n).padStart(2, "0");
-
 // The message text for an entry
 export type SegmentKind = "name" | "damage" | "heal" | "crit";
 export type Segment = { text: string; kind?: SegmentKind };
@@ -48,12 +46,12 @@ export function describeParts(entry: LogEntry): Segment[] {
   switch (entry.kind) {
     case "attack":
       return [
+        ...(entry.crit ? [{ text: " (Crit!)", kind: "crit" as const }] : []),
         { text: entry.attacker, kind: "name" },
         { text: ` ${entry.verb} ` },
         { text: entry.victim, kind: "name" },
         { text: " for " },
         { text: `${round2(entry.damage)} damage`, kind: "damage" },
-        ...(entry.crit ? [{ text: " (critical hit!)", kind: "crit" as const }] : []),
       ];
     case "death":
       return [{ text: entry.player, kind: "name" }, { text: " has died!" }];

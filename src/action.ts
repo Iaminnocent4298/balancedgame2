@@ -4,14 +4,15 @@ import { getAttackDamage, getHealing, resolveHit } from "./attackCalc";
 import { getAttackCooldownMs } from "./cooldowns";
 import type { Cooldowns, Enhancements, Equipment } from "./equipment";
 import { formatCountdown } from "./format";
-import { ITEMS } from "./itemCatalog";
-import { ACTION_KINDS, ATTACK_VERBS, slotAccepts, type SlotId } from "./items";
+import { getEquippedItem } from "./catalog";
+import { ACTION_KINDS, ATTACK_VERBS, type SlotId } from "./items";
 import { applyXp } from "./leveling";
 import { pushLog, type LogEntry } from "./log";
 import { computeRegen, getRegenTick, type RegenResult } from "./regen";
 import type { RoomMode } from "./rooms";
 import { getBreakdowns } from "./statCalc";
 import { withDefaults, type Stats } from "./stats";
+import { round2 } from "./format";
 
 export type ActionFailure =
   | "no_item"
@@ -57,8 +58,6 @@ type PlayerData = {
 };
 
 type Vitals = { health: number; mana: number; coins: number };
-
-const round2 = (v: number) => Math.round(v * 100) / 100;
 
 // Uses the item in `slot` (a weapon or a spell) on `targetId`. Everything happens in one
 // step: the effect, the mana cost, the cooldown, the rewards, and the log line.
@@ -122,8 +121,8 @@ export async function performAction(
     // The item being used, and what it does
     const equipment = actor.equipment ?? {};
     const enhancements = actor.enhancements ?? {};
-    const item = ITEMS[equipment[slot] ?? ""];
-    if (!item || !slotAccepts(slot, item.type)) {
+    const item = getEquippedItem(equipment, slot);
+    if (!item) {
       throw new ActionError("no_item", "That item has vanished... just kidding you removed it yourself");
     }
     const kind = ACTION_KINDS[item.type];

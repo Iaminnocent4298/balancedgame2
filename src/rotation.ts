@@ -1,4 +1,4 @@
-import { entryKey, type ShopEntry } from "./shopCatalog";
+import type { CatalogEntry } from "./items";
 
 // Turns text into a stream of random-looking but repeatable numbers (0 up to 1).
 // The same text always gives the same stream.
@@ -36,19 +36,19 @@ function shuffled<T>(list: T[], random: () => number): T[] {
 export function getRotation(
   roomId: string,
   seasonIndex: number,
-  pool: ShopEntry[],
+  pool: CatalogEntry[],
   slots: number
-): ShopEntry[] {
+): CatalogEntry[] {
   let previous = new Set<string>();
-  let current: ShopEntry[] = [];
+  let current: CatalogEntry[] = [];
 
   for (let season = 0; season <= seasonIndex; season++) {
     const random = seededRandom(`${roomId}:${season}`);
-    const fresh = pool.filter((e) => !previous.has(entryKey(e)));
-    const repeats = pool.filter((e) => previous.has(entryKey(e)));
+    const fresh = pool.filter((e) => !previous.has(e.id));
+    const repeats = pool.filter((e) => previous.has(e.id));
     // New items first. Repeats only fill in if the pool is too small to avoid them
     current = [...shuffled(fresh, random), ...shuffled(repeats, random)].slice(0, slots);
-    previous = new Set(current.map(entryKey));
+    previous = new Set(current.map((e) => e.id));
   }
 
   // List them in the pool's order so the table doesn't look scrambled

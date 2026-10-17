@@ -2,16 +2,14 @@ import { STATS, isDead } from "./stats";
 import { getDisplayStats } from "./statCalc";
 import Tooltip from "./Tooltip";
 import { useRoomData } from "./useRoomData";
+import { youFirst } from "./rooms";
 
 export default function StatsTab({ uid }: { uid: string }) {
   const { players } = useRoomData();
 
   if (!players) return <p>Loading stats...</p>;
 
-  // You first, then everyone else alphabetically
-  const sorted = [...players].sort((a, b) =>
-    a.id === uid ? -1 : b.id === uid ? 1 : a.name.localeCompare(b.name)
-  );
+  const sorted = youFirst(players, uid);
 
   return (
     <div className="table-scroll">

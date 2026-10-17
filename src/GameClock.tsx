@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { getGameTime } from "./gameClock";
 import { getStartMs, type Room } from "./rooms";
-
-const pad = (n: number) => String(n).padStart(2, "0");
+import { pad } from "./format";
 
 export default function GameClock({ room }: { room: Room }) {
   const [now, setNow] = useState(() => Date.now());

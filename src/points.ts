@@ -1,8 +1,10 @@
-import { doc, onSnapshot, runTransaction } from "firebase/firestore";
+import { doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 import { DEFAULT_STATS, POINT_RATES, type Stats } from "./stats";
 import type { Enhancements, Equipment } from "./equipment";
 import { clampVitals } from "./regen";
+import { DAY_LENGTH_MS } from "./gameClock";
+import type { RoomMode } from "./rooms";
 
 export type PointsState = {
   available: number; // unspent ability points
@@ -12,46 +14,73 @@ export type PointsState = {
   enhancements: Enhancements | null;
 };
 
-export function subscribeToPoints(uid: string, onChange: (state: PointsState) => void) {
-  return onSnapshot(doc(db, "players", uid), (snap) => {
-    const data = snap.data();
-    onChange({
-      available: (data?.stats?.abilityPoints as number | undefined) ?? DEFAULT_STATS.abilityPoints,
-      spent: (data?.points as Stats | undefined) ?? {},
-      stats: (data?.stats as Stats | undefined) ?? null,
-      equipment: (data?.equipment as Equipment | undefined) ?? null,
-      enhancements: (data?.enhancements as Enhancements | undefined) ?? null,
-    });
-  });
+export function getPointsChangeCooldownUntil(
+  lastChangedAt: number | undefined,
+  lastChangedLevel: number | undefined,
+  currentLevel: number,
+  mode: RoomMode
+): number {
+  if (lastChangedAt === undefined || currentLevel > (lastChangedLevel ?? currentLevel)) return 0;
+  return lastChangedAt + DAY_LENGTH_MS[mode];
 }
 
-// delta > 0 spends AP into a stat, delta < 0 takes AP back out.
-// Returns false (and changes nothing) if it isn't possible.
-export async function changePoints(uid: string, field: string, delta: number): Promise<boolean> {
-  if (!(field in POINT_RATES) || !Number.isInteger(delta) || delta === 0) return false;
+export async function confirmPoints(
+  uid: string,
+  nextPoints: Stats,
+  mode: RoomMode
+): Promise<void> {
+  for (const [field, value] of Object.entries(nextPoints)) {
+    if (!(field in POINT_RATES) || !Number.isInteger(value) || value < 0) {
+      throw new Error("The ability point allocation is invalid.");
+    }
+  }
+
   const playerRef = doc(db, "players", uid);
 
-  return runTransaction(db, async (tx) => {
+  await runTransaction(db, async (tx) => {
     const data = (await tx.get(playerRef)).data();
     const available = (data?.stats?.abilityPoints as number | undefined) ?? DEFAULT_STATS.abilityPoints;
-    const spent = (data?.points?.[field] as number | undefined) ?? 0;
+    const currentPoints = (data?.points as Stats | undefined) ?? {};
+    const currentLevel = (data?.stats?.level as number | undefined) ?? DEFAULT_STATS.level;
+    const lastChangedAt = data?.pointsChangedAt as number | undefined;
+    const lastChangedLevel = data?.pointsChangedLevel as number | undefined;
+    const cooldownUntil = getPointsChangeCooldownUntil(
+      lastChangedAt,
+      lastChangedLevel,
+      currentLevel,
+      mode
+    );
 
-    if (delta > 0 && available < delta) return false; // not enough AP
-    if (delta < 0 && spent < -delta) return false; // can't go below 0 in a stat
+    if (Date.now() < cooldownUntil) {
+      throw new Error("You can only change your spec once per in-game day, unless you level up.");
+    }
 
-    // Taking points out of max health or max mana can leave the current value over the max
+    const pointsToWrite: Record<string, number> = {};
+    let pointDelta = 0;
+    let hasChanges = false;
+    for (const field of Object.keys(POINT_RATES)) {
+      const current = currentPoints[field] ?? 0;
+      const next = nextPoints[field] ?? 0;
+      if (next !== current) hasChanges = true;
+      pointDelta += next - current;
+      pointsToWrite[`points.${field}`] = next;
+    }
+    if (!hasChanges) return;
+    if (pointDelta > available) throw new Error("You don't have enough ability points.");
+
     const trim = clampVitals(
       data?.stats,
-      { ...(data?.points as Stats | undefined), [field]: spent + delta },
+      nextPoints,
       data?.equipment,
       data?.enhancements
     );
 
     tx.update(playerRef, {
-      "stats.abilityPoints": available - delta,
-      [`points.${field}`]: spent + delta,
+      "stats.abilityPoints": available - pointDelta,
+      ...pointsToWrite,
+      pointsChangedAt: Date.now(),
+      pointsChangedLevel: currentLevel,
       ...trim,
     });
-    return true;
   });
 }

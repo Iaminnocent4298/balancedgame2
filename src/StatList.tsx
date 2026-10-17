@@ -1,7 +1,6 @@
 import type { ItemStats } from "./items";
 import { describeField } from "./stats";
-
-const round = (v: number) => String(Math.round(v * 100) / 100);
+import { formatNumber as round } from "./format";
 
 export default function StatList({ stats }: { stats?: ItemStats }) {
   const entries = Object.entries(stats ?? {}).filter(([, v]) => v !== 0);

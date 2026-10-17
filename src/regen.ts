@@ -3,9 +3,9 @@ import { scaleToMode } from "./gameClock";
 import type { RoomMode } from "./rooms";
 import { getBreakdowns } from "./statCalc";
 import { withDefaults, type Stats } from "./stats";
+import { round2 } from "./format";
 
-// Regen happens twice per in-game day. A Speed-mode day is 2 minutes, so one tick is 1 minute.
-export const REGEN_INTERVAL_SPEED_MS = 60_000;
+export const REGEN_INTERVAL_SPEED_MS = 30_000;
 
 export const getRegenInterval = (mode: RoomMode) => scaleToMode(REGEN_INTERVAL_SPEED_MS, mode);
 
@@ -14,8 +14,6 @@ export const getRegenInterval = (mode: RoomMode) => scaleToMode(REGEN_INTERVAL_S
 export function getRegenTick(mode: RoomMode, startMs: number, nowMs: number): number {
   return Math.max(0, Math.floor((nowMs - startMs) / getRegenInterval(mode)));
 }
-
-const round2 = (v: number) => Math.round(v * 100) / 100;
 
 // The player fields regen needs
 export type RegenSubject = {

@@ -1,43 +1,84 @@
-import { changePoints, type PointsState } from "./points";
-import { POINT_RATES, STATS, describeField, withDefaults } from "./stats";
+import { useEffect, useState } from "react";
+import { confirmPoints, getPointsChangeCooldownUntil } from "./points";
+import { POINT_RATES, STATS, describeField, withDefaults, type Stats } from "./stats";
 import { getDisplayStats } from "./statCalc";
 import Tooltip from "./Tooltip";
 import { useRoomData } from "./useRoomData";
-
-const round = (v: number) => String(Math.round(v * 100) / 100);
+import { formatNumber as round } from "./format";
+import Countdown from "./Countdown";
+import { usePopup } from "./usePopup";
+import { popupMessages } from "./PopupMessages";
 
 export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () => void }) {
-  // undefined = still loading
-  const { me } = useRoomData();
+  const { me, room } = useRoomData();
+  const { showPopup } = usePopup();
+  const pointStateKey = JSON.stringify(
+    [me?.id, ...Object.keys(POINT_RATES).map((field) => me?.points?.[field] ?? 0)]
+  );
+  const [draftState, setDraftState] = useState<{ source: string; values: Stats } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
-  if (!me) return <p>Loading...</p>;
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const state: PointsState = {
-    available: withDefaults(me.stats).abilityPoints,
-    spent: me.points ?? {},
-    stats: me.stats,
-    equipment: me.equipment,
-    enhancements: me.enhancements,
-  };
+  const activeRoom = room;
+  if (!me || !activeRoom) return <p>Loading...</p>;
 
+  const roomMode = activeRoom.mode;
+  const committed = me.points ?? {};
+  const draft = draftState?.source === pointStateKey ? draftState.values : committed;
+  const available = withDefaults(me.stats).abilityPoints;
+  const spentChange = Object.keys(POINT_RATES).reduce(
+    (sum, field) => sum + (draft[field] ?? 0) - (committed[field] ?? 0),
+    0
+  );
+  const draftAvailable = available - spentChange;
+  const stats = getDisplayStats(me.stats, draft, me.equipment, me.enhancements);
+  stats.abilityPoints = draftAvailable;
+  const lastChangedAt = me.pointsChangedAt;
+  const lastChangedLevel = me.pointsChangedLevel;
+  const cooldownUntil = getPointsChangeCooldownUntil(
+    lastChangedAt,
+    lastChangedLevel,
+    withDefaults(me.stats).level,
+    roomMode
+  );
+  const hasChanges = Object.keys(POINT_RATES).some(
+    (field) => (draft[field] ?? 0) !== (committed[field] ?? 0)
+  );
+  const cooldownActive = now < cooldownUntil;
   const ap = describeField("abilityPoints");
-  // Same totals as the Stats tab: base + points + equipment
-  const live = getDisplayStats(state.stats, state.spent, state.equipment, state.enhancements);
 
-  // One button. Disabled when the change isn't possible (no popups, as requested).
   function stepButton(field: string, spent: number, step: number) {
-    const impossible = step > 0 ? state!.available < step : spent < -step;
+    const impossible = step > 0 ? draftAvailable < step : spent < -step;
     return (
       <button
         key={step}
-        disabled={impossible}
+        disabled={impossible || busy}
         onClick={() => {
-          changePoints(uid, field, step).catch((err) => console.error(err));
+          setDraftState({
+            source: pointStateKey,
+            values: { ...draft, [field]: spent + step },
+          });
         }}
       >
         {step > 0 ? `+${step}` : step}
       </button>
     );
+  }
+
+  async function handleConfirm() {
+    setBusy(true);
+    try {
+      await confirmPoints(uid, draft, roomMode);
+    } catch (error) {
+      showPopup(popupMessages.points.confirmFailure(error));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -48,11 +89,10 @@ export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () =>
       </div>
 
       <div className="box points-ap stat-abilityPoints">
-        {ap.icon} Ability Points: <strong>{round(state.available)}</strong>
+        {ap.icon} Ability Points remaining: <strong>{round(draftAvailable)}</strong>
       </div>
 
       <div className="points-layout">
-        {/* Left: spend points */}
         <section className="points-section">
           <h3>Spend points</h3>
           <div className="table-scroll">
@@ -67,7 +107,7 @@ export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () =>
               <tbody>
                 {Object.entries(POINT_RATES).map(([field, rate]) => {
                   const { icon, label, suffix, statId } = describeField(field);
-                  const spent = state.spent[field] ?? 0;
+                  const spent = draft[field] ?? 0;
                   return (
                     <tr key={field} className={`stat-${statId}`}>
                       <Tooltip content={`Each point gives +${round(rate)}${suffix} ${label}`}>
@@ -94,11 +134,27 @@ export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () =>
               </tbody>
             </table>
           </div>
+          <Tooltip
+            content={cooldownActive ? (
+              <>
+                <Countdown until={cooldownUntil} /> remaining
+                (or level up)
+              </>
+            ) : null}
+          >
+            <span className="points-confirm-trigger">
+              <button
+                disabled={busy || !hasChanges || cooldownActive || draftAvailable < 0}
+                onClick={handleConfirm}
+              >
+                {busy ? "Confirming..." : "Confirm changes"}
+              </button>
+            </span>
+          </Tooltip>
         </section>
 
-        {/* Right: your live stats */}
         <section className="points-section">
-          <h3>Your stats</h3>
+          <h3>Preview stats</h3>
           <div className="table-scroll">
             <table className="stats-table">
               <thead>
@@ -115,7 +171,7 @@ export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () =>
                         {def.icon} {def.label}
                       </th>
                     </Tooltip>
-                    <td>{def.display(live)}</td>
+                    <td>{def.display(stats)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -51,6 +51,12 @@ button, input, select, textarea { font: inherit; }
 
 /* ===== Banner (above everything, except inside rooms) ===== */
 .banner { display: block; width: min(560px, 100%); height: auto; margin: 0.5rem auto 1rem; }
+.splash-text {
+  margin: -0.5rem auto 0.75rem;
+  color: #ffe27a;
+  font-weight: 700;
+  text-align: center;
+}
 
 /* ===== Top bar ===== */
 .topbar {
@@ -343,6 +349,11 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 }
 .points-section { max-width: 100%; }
 .points-section h3 { margin: 0 0 0.5rem; text-align: center; }
+.points-confirm-trigger {
+  display: inline-block;
+  margin-top: 0.75rem;
+}
+.points-confirm-trigger > button:disabled { pointer-events: none; }
 
 /* ===== Enhancements (item tooltip) ===== */
 .item-enh {
@@ -405,7 +416,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .shop-info strong { font-size: 1.3em; font-variant-numeric: tabular-nums; }
 .row-tag { display: block; font-size: 0.75rem; opacity: 0.75; }
 .row-level { display: block; font-size: 0.75rem; }
-.row-level-locked { color: #ffc2cb; font-weight: 700; } /* shown when your level is too low */
+.row-level-locked { color: #fe96f9; font-weight: 700; } /* shown when your level is too low */
 
 .shop-tables {
   display: flex;
@@ -481,9 +492,14 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   bottom: 0.5rem;
   z-index: 1;                 /* below popups (1000) and tooltips (2000) */
   color: #fff;
-  font-size: 0.75rem;
+  font-size: 1rem;
   opacity: 0.75;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);  /* stays readable over the purple boxes */
   pointer-events: none;       /* never blocks clicks on anything underneath */
   user-select: none;
+}
+
+/* ===== Changelog ===== */
+.bug {
+  color: #ff5555;
 }

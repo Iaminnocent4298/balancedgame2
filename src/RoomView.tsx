@@ -6,6 +6,7 @@ import StatsTab from "./StatsTab";
 import ActionTab from "./ActionTab";
 import LogTab from "./LogTab";
 import ChangelogTab from "./ChangelogTab";
+import { popupMessages } from "./PopupMessages";
 import { usePopup } from "./usePopup";
 import { useRoomData } from "./useRoomData";
 
@@ -56,10 +57,8 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
     try {
       await startGame(uid, roomId);
     } catch (err) {
-      showPopup({
-        title: "Couldn't start",
-        message: err instanceof Error ? err.message : "Something went wrong. Contact @iaminnocent4298 if this error persists.",
-      });
+      if (!(err instanceof Error)) console.error(err);
+      showPopup(popupMessages.room.startFailure(err));
     } finally {
       setStarting(false);
     }

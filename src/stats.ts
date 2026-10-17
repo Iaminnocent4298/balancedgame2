@@ -1,3 +1,5 @@
+import { formatNumber as n } from "./format";
+
 // A player's stats are a flat map of numbers, e.g. { health: 100, maxHealth: 100, ... }
 export type Stats = Record<string, number>;
 
@@ -13,8 +15,6 @@ export type StatDef = {
   display: (s: Stats) => string;
 };
 
-// Rounds to at most 2 decimals
-const n = (v: number) => String(Math.round(v * 100) / 100);
 
 export const STATS: StatDef[] = [
   {
@@ -95,7 +95,7 @@ export const STATS: StatDef[] = [
     id: "critChance", icon: "✦", label: "Crit Chance",
     description: "Crit Chance is the percentage chance you deal a critical hit",
     perPoint: { critChance: 0.5 },
-    fields: { critChance: 0 },
+    fields: { critChance: 25 },
     fieldInfo: { critChance: { suffix: "%" } },
     display: (s) => `${n(s.critChance)}%`,
   },
@@ -103,7 +103,7 @@ export const STATS: StatDef[] = [
     id: "critDamage", icon: "☠", label: "Crit Damage",
     description: "Crit Damage increases the amount of damage dealt during a critical hit",
     perPoint: { critDamage: 1 },
-    fields: { critDamage: 0 },
+    fields: { critDamage: 50 },
     display: (s) => n(s.critDamage),
   },
   {

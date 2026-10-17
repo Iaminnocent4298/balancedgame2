@@ -1,7 +1,7 @@
-import { ENHANCEMENTS } from "./enhancementCatalog";
 import type { Enhancements, Equipment } from "./equipment";
-import { ITEMS } from "./itemCatalog";
-import { ARMOUR_SLOTS, slotAccepts, type SlotId } from "./items";
+import { ENHANCEMENTS, getEquippedItem } from "./catalog";
+import { ARMOUR_SLOTS, type SlotId } from "./items";
+import { round2 } from "./format";
 
 // One item-only stat (damage, healRaw, healPercent) from the item in a slot,
 // plus the same stat on that item's enhancements
@@ -11,8 +11,8 @@ function statFromSlot(
   equipment: Equipment,
   enhancements: Enhancements
 ): number {
-  const item = ITEMS[equipment[slot] ?? ""];
-  if (!item || !slotAccepts(slot, item.type)) return 0;
+  const item = getEquippedItem(equipment, slot);
+  if (!item) return 0;
   let total = item.stats?.[field] ?? 0;
   for (const id of enhancements[slot] ?? []) total += ENHANCEMENTS[id]?.stats?.[field] ?? 0;
   return total;
@@ -42,8 +42,6 @@ export function getHealing(slot: SlotId, equipment: Equipment, enhancements: Enh
     percent: statFromSlot(slot, "healPercent", equipment, enhancements),
   };
 }
-
-const round2 = (v: number) => Math.round(v * 100) / 100;
 
 export type HitResult = { crit: boolean; damage: number };
 
