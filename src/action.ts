@@ -204,7 +204,7 @@ export async function performAction(
         actorStats.nextLevelXp,
         hit.damage
       );
-      const coinsGained = Math.floor(hit.damage / 10);
+      const coinsGained = Math.floor(hit.damage / 5);
       Object.assign(actorExtra, {
         "stats.level": progress.level,
         "stats.levelXp": progress.levelXp,

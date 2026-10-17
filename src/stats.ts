@@ -50,7 +50,7 @@ export const STATS: StatDef[] = [
   {
     id: "healthRegen", icon: "❣", label: "Health Regen",
     description: "Health regen tick occurs at noon and midnight of each in-game day",
-    perPoint: { healthRegenRaw: 5 },
+    perPoint: { healthRegenRaw: 10 },
     fields: { healthRegenRaw: 0, healthRegenPercent: 1 },
     fieldInfo: {
         healthRegenRaw: { label: "Health Regen" },
@@ -70,7 +70,7 @@ export const STATS: StatDef[] = [
   {
     id: "manaRegen", icon: "⸎", label: "Mana Regen",
     description: "Mana regen tick occurs at noon and midnight of each in-game day",
-    perPoint: { manaRegenRaw: 1 },
+    perPoint: { manaRegenRaw: 5 },
     fields: { manaRegenRaw: 0, manaRegenPercent: 1 },
     fieldInfo: {
         manaRegenRaw: { label: "Mana Regen" },

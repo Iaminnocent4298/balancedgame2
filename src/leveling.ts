@@ -1,6 +1,6 @@
 // XP needed to go from `level` to `level + 1`. PLACEHOLDER curve: change it freely.
 // Keep xpToNextLevel(1) equal to the nextLevelXp default in stats.ts (100).
-export const xpToNextLevel = (level: number, prev : number) => prev + Math.floor(level/5) * 50;
+export const xpToNextLevel = (level: number, prev : number) => prev + Math.floor(level/5) * 100;
 
 export function applyXp(level: number, levelXp: number, nextLevelXp: number, gained: number) {
   let lvl = level;
