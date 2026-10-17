@@ -35,7 +35,7 @@ export const STATS: StatDef[] = [
     id: "coins", icon: "$", label: "Coins",
     description: "Use coins to purchase literally anything in the shop. Gain coins by dealing damage!",
     plain: ["coins"],   // a plain value: not split into base/points/equipment
-    fields: { coins: 100 },
+    fields: { coins: 50 },
     display: (s) => n(s.coins),
   },
   {
