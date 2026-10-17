@@ -9,12 +9,16 @@ import {
 import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./firebase";
 
-const USERNAME_RE = /^[A-Za-z0-9_]{3,16}$/;
+export const USERNAME_MIN_LENGTH = 3;
+export const USERNAME_MAX_LENGTH = 16;
+const USERNAME_RE = new RegExp(`^[A-Za-z0-9_]{${USERNAME_MIN_LENGTH},${USERNAME_MAX_LENGTH}}$`);
 
 export async function signUp(email: string, password: string, username: string) {
   username = username.trim();
   if (!USERNAME_RE.test(username)) {
-    throw new Error("Username must be 3-16 characters: letters, numbers, or underscores.");
+    throw new Error(
+      `Username must be ${USERNAME_MIN_LENGTH}-${USERNAME_MAX_LENGTH} characters: letters, numbers, or underscores.`
+    );
   }
 
   const cred = await createUserWithEmailAndPassword(auth, email, password);

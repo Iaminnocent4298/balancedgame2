@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signUp, logIn } from "./auth";
+import { logIn, signUp, USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH } from "./auth";
 
 export default function AuthForm() {
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -25,7 +25,8 @@ export default function AuthForm() {
         <h2>{mode === "signup" ? "Create account" : "Log in"}</h2>
         {mode === "signup" && (
           <input placeholder="Username" value={username}
-            onChange={(e) => setUsername(e.target.value)} required />
+            onChange={(e) => setUsername(e.target.value)} required
+            minLength={USERNAME_MIN_LENGTH} maxLength={USERNAME_MAX_LENGTH} />
         )}
         <input type="email" placeholder="Email" value={email}
           onChange={(e) => setEmail(e.target.value)} required />
