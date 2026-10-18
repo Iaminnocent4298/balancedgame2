@@ -45,6 +45,10 @@ export function getHealing(slot: SlotId, equipment: Equipment, enhancements: Enh
 
 export type HitResult = { crit: boolean; damage: number };
 
+function getDamageMultiplier(stat: number): number {
+  return stat >= 0 ? 1 + stat / 100 : 1 / (1 - stat / 100);
+}
+
 export function resolveHit(input: {
   baseDamage: number; // from getAttackDamage(...).total
   strength: number; // the attacker's total strength
@@ -56,12 +60,14 @@ export function resolveHit(input: {
   const crit = Math.random() * 100 < input.critChance;
 
   // Strength, plus crit damage if it crit
-  let damage = input.baseDamage * Math.max(0, 1 + input.strength / 100);
-  if (crit) damage *= Math.max(0, 1 + input.critDamage / 100);
+  let damage = input.baseDamage * getDamageMultiplier(input.strength);
+  if (crit) damage *= getDamageMultiplier(input.critDamage);
 
-  // Defence removes def / (def + 100) of the damage
-  const defence = Math.max(0, input.defence);
-  damage *= 1 - defence / (defence + 100);
+  // Positive defence reduces damage with diminishing returns; negative defence increases it.
+  const defenceMultiplier = input.defence >= 0
+    ? 1 - input.defence / (input.defence + 100)
+    : 1 - input.defence / 100;
+  damage *= defenceMultiplier;
 
   return { crit, damage: round2(damage) };
 }

@@ -13,9 +13,21 @@ export const CATALOG = defineCatalog({
   items: [
     // ----- Basic Items -----
     {
-      id: "basic_weapon", name: "Basic Weapon", type: "weapon",
+      id: "basic_dagger", name: "Basic Dagger", type: "weapon",
+      rarity: "common", value: 15, enhancementSlots: 1,
+      stats: { damage: 12, attackSpeed: 100 },
+      shop: "basicItems",
+    },
+    {
+      id: "basic_sword", name: "Basic Sword", type: "weapon",
       rarity: "common", value: 15, enhancementSlots: 1,
       stats: { damage: 25 },
+      shop: "basicItems",
+    },
+    {
+      id: "basic_longsword", name: "Basic Longsword", type: "weapon",
+      rarity: "common", value: 15, enhancementSlots: 1,
+      stats: { damage: 55, attackSpeed: -100 },
       shop: "basicItems",
     },
     {
@@ -64,10 +76,30 @@ export const CATALOG = defineCatalog({
       shop: "basicItems",
     },
 
+    // ----- Weapons -----
+
+    {
+      id: "t1_dagger", name: "T1 Dagger", type: "weapon",
+      rarity: "uncommon", value: 35, levelReq: 2, enhancementSlots: 2,
+      stats: { damage: 20, attackSpeed: 100 },
+      shop: "basicItems",
+    },
     {
       id: "t1_sword", name: "T1 Sword", type: "weapon",
       rarity: "uncommon", value: 35, levelReq: 2, enhancementSlots: 2,
       stats: { damage: 50, strength: 10, critChance: 5, critDamage: 10 },
+      shop: "basicItems",
+    },
+    {
+      id: "t1_longsword", name: "T1 Longsword", type: "weapon",
+      rarity: "uncommon", value: 35, levelReq: 2, enhancementSlots: 2,
+      stats: { damage: 105, attackSpeed: -100 },
+      shop: "basicItems",
+    },
+    {
+      id: "t2_dagger", name: "T2 Dagger", type: "weapon",
+      rarity: "rare", value: 75, levelReq: 6, enhancementSlots: 3,
+      stats: { damage: 35, attackSpeed: 100 },
       shop: "basicItems",
     },
     {
@@ -77,9 +109,27 @@ export const CATALOG = defineCatalog({
       shop: "basicItems",
     },
     {
+      id: "t2_longsword", name: "T2 Longsword", type: "weapon",
+      rarity: "rare", value: 75, levelReq: 6, enhancementSlots: 3,
+      stats: { damage: 155, attackSpeed: -100 },
+      shop: "basicItems",
+    },
+    {
+      id: "t3_dagger", name: "T3 Dagger", type: "weapon",
+      rarity: "epic", value: 160, levelReq: 10, enhancementSlots: 4,
+      stats: { damage: 45, attackSpeed: 100 },
+      shop: "basicItems",
+    },
+    {
       id: "t3_sword", name: "T3 Sword", type: "weapon",
       rarity: "epic", value: 160, levelReq: 10, enhancementSlots: 4,
       stats: { damage: 100, strength: 50, critChance: 15, critDamage: 100 },
+      shop: "basicItems",
+    },
+    {
+      id: "t3_longsword", name: "T3 Longsword", type: "weapon",
+      rarity: "epic", value: 160, levelReq: 10, enhancementSlots: 4,
+      stats: { damage: 205, attackSpeed: -100 },
       shop: "basicItems",
     },
 
@@ -224,32 +274,44 @@ export const CATALOG = defineCatalog({
 
       // ----- Limited item bases (sold in the Limited! shop) -----
     {
-      id: "t4_sword", name: "T4 Sword", type: "weapon",
+      id: "t4_dagger", name: "T4 Dagger", type: "weapon",
       rarity: "epic", value: 300, levelReq: 14, enhancementSlots: 5,
+      stats: { damage: 65, attackSpeed: 100 },
+      shop: "basicItems",
+    },
+    {
+      id: "t4_sword", name: "T4 Sword", type: "weapon",
+      rarity: "legendary", value: 300, levelReq: 14, enhancementSlots: 5,
       stats: { damage: 150, strength: 100, critChance: 25, critDamage: 150 },
       shop: "limited",
     },
     {
+      id: "t4_longsword", name: "T4 Longsword", type: "weapon",
+      rarity: "legendary", value: 300, levelReq: 14, enhancementSlots: 5,
+      stats: { damage: 310, attackSpeed: -100 },
+      shop: "limited",
+    },
+    {
       id: "t4_helmet", name: "T4 Helmet", type: "helmet",
-      rarity: "epic", value: 200, levelReq: 14, enhancementSlots: 4,
+      rarity: "legendary", value: 200, levelReq: 14, enhancementSlots: 5,
       stats: { maxHealth: 125, defence : 35, strength: 25 },
       shop: "limited",
     },
     {
       id: "t4_chestplate", name: "T4 Chestplate", type: "chestplate",
-      rarity: "epic", value: 350, levelReq: 14, enhancementSlots: 4,
+      rarity: "legendary", value: 350, levelReq: 14, enhancementSlots: 5,
       stats: { maxHealth: 180, defence : 60, critDamage: 25 },
       shop: "limited",
     },
     {
       id: "t4_leggings", name: "T4 Leggings", type: "leggings",
-      rarity: "epic", value: 275, levelReq: 14, enhancementSlots: 4,
+      rarity: "legendary", value: 275, levelReq: 14, enhancementSlots: 5,
       stats: { maxHealth: 150, defence : 45, critChance: 10 },
       shop: "limited",
     },
     {
       id: "t4_boots", name: "T4 Boots", type: "boots",
-      rarity: "epic", value: 200, levelReq: 10, enhancementSlots: 4,
+      rarity: "legendary", value: 200, levelReq: 10, enhancementSlots: 5,
       stats: { maxHealth: 125, defence : 35, strength: 10, critDamage: 15 },
       shop: "limited",
     },
@@ -293,9 +355,15 @@ export const CATALOG = defineCatalog({
       shop: "enhancements",
     },
     {
+      id: "attackspeed", name: "Swinger", 
+      rarity: "common", value: 20,
+      stats: { attackSpeed : 10 },
+      shop: "enhancements",
+    },
+    {
       id: "berserker", name: "Berserker", 
-      rarity: "uncommon", value: 35,
-      stats: { strength: 25, critChance: 2.5, critDamage: 15 },
+      rarity: "uncommon", value: 40,
+      stats: { strength: 25, critChance: 2.5, critDamage: 15, attackSpeed: 5 },
       shop: "enhancements",
     },
     {
@@ -318,14 +386,20 @@ export const CATALOG = defineCatalog({
     },
     {
       id: "balanced", name: "Balanced", 
-      rarity: "uncommon", value: 35,
-      stats: { strength: 10, critDamage: 10, defence: 10, coinGain: 1 },
+      rarity: "uncommon", value: 40,
+      stats: { strength: 10, critDamage: 10, defence: 10, coinGain: 1, attackSpeed: 5 },
       shop: "enhancements",
     },
     {
       id: "wealthy", name: "Wealthy", 
       rarity: "uncommon", value: 60,
       stats: { strength: -10, critDamage: -10, defence: -10, coinGain : 4 },
+      shop: "enhancements",
+    },
+    {
+      id: "speedrun", name: "Speedrunning", 
+      rarity: "uncommon", value: 60,
+      stats: { attackSpeed : 25 },
       shop: "enhancements",
     },
 
@@ -361,6 +435,12 @@ export const CATALOG = defineCatalog({
       shop: "enhancements",
     },
     {
+      id: "rush", name: "Rush", 
+      rarity: "rare", value: 100,
+      stats: { strength: 10, critDamage: 10, attackSpeed: 25, defence: -25 },
+      shop: "enhancements",
+    },
+    {
       id: "brittle", name: "Glass Cannon++", 
       rarity: "epic", value: 150,
       stats: { strength: 100, critChance: 15, critDamage: 75, defence: -100, maxHealth: -250, healthRegenRaw: -25, healthRegenPercent: -1 },
@@ -384,6 +464,12 @@ export const CATALOG = defineCatalog({
       stats: { strength: -50, critDamage: -50, defence: -50, coinGain : 12 },
       shop: "enhancements",
     },
+    {
+      id: "maximum", name: "Maximum", 
+      rarity: "epic", value: 225,
+      stats: { strength: 100, critChance: 25, critDamage: 100, attackSpeed: 100, defence: -250, healthRegenRaw: -100 },
+      shop: "enhancements",
+    },
   ],
 
   expanders: [
@@ -398,7 +484,7 @@ export const CATALOG = defineCatalog({
       shop: "enhancements",
     },
     {
-      id: "t3_expander", name: "Expander +3", rarity: "legendary", value: 500, slots: 3, levelReq: 13,
+      id: "t3_expander", name: "Expander +3", rarity: "legendary", value: 450, slots: 3, levelReq: 13,
       description: "Adds 3 enhancement slots",
       shop: "enhancements",
     },

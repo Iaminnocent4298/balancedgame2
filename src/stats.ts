@@ -107,6 +107,14 @@ export const STATS: StatDef[] = [
     display: (s) => n(s.critDamage),
   },
   {
+    id: "attackSpeed", icon: "⚔", label: "Attack Speed",
+    description: "Each 100 Attack Speed increases weapon attack rate by 100%, halving cooldown",
+    perPoint: { attackSpeed: 1 },
+    fields: { attackSpeed: 0 },
+    fieldInfo: { attackSpeed: { suffix: "%" } },
+    display: (s) => `${n(s.attackSpeed)}%`,
+  },
+  {
     id: "defence", icon: "❈", label: "Defence",
     description: "Defence decreases the amount of damage you would have taken",
     perPoint: { defence: 1 },

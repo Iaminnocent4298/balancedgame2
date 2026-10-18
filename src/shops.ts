@@ -8,7 +8,7 @@ export type ShopDef = {
 const defs = {
   basicItems: { title: "Basic Items" },
   enhancements: { title: "Enhancements" },
-  limited: { title: "Limited!", rotating: { slots: 5 } },
+  limited: { title: "Limited!", rotating: { slots: 7 } },
 } satisfies Record<string, ShopDef>;
 
 export type ShopId = keyof typeof defs;

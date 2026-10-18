@@ -194,6 +194,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .stat-strength      { color: #ff5555; }
 .stat-critChance    { color: #459bff; }
 .stat-critDamage    { color: #459bff; }
+.stat-attackSpeed   { color: #ffde2f; }
 .stat-defence       { color: #55ff55; }
 
 /* Non stat colours for tooltips */

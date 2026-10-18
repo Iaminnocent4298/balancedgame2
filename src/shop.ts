@@ -3,7 +3,7 @@ import { db } from "./firebase";
 import { CATALOG_BY_ID, getEquippedItem } from "./catalog";
 import type { Equipment } from "./equipment";
 import {
-  canExpandSlots, getItemType, getMaxEnhancements, slotsFor,
+  canExpandSlots, getMaxEnhancements, slotsFor,
   type Enhancement, type Expander, type Item, type SlotId,
 } from "./items";
 import { DEFAULT_STATS } from "./stats";

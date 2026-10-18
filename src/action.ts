@@ -121,6 +121,7 @@ export async function performAction(
     // The item being used, and what it does
     const equipment = actor.equipment ?? {};
     const enhancements = actor.enhancements ?? {};
+    const mine = getBreakdowns(actor.stats, actor.points, equipment, enhancements);
     const item = getEquippedItem(equipment, slot);
     if (!item) {
       throw new ActionError("no_item", "That item has vanished... just kidding you removed it yourself");
@@ -129,7 +130,7 @@ export async function performAction(
     if (!kind) throw new ActionError("invalid", `${item.name} can't be used yet.`);
 
     // The weapon has a cooldown. Spells don't: they cost mana instead
-    const cooldownMs = getAttackCooldownMs(slot, mode);
+    const cooldownMs = getAttackCooldownMs(slot, mode, mine.attackSpeed.total);
     const readyAt = actor.cooldowns?.[slot] ?? 0;
     if (cooldownMs > 0 && now < readyAt) {
       throw new ActionError(
@@ -181,7 +182,6 @@ export async function performAction(
       result = { kind: "heal", healed, targetHealth: newHealth };
     } else {
       // 1) Base damage: the selected item, plus damage on your armour
-      const mine = getBreakdowns(actor.stats, actor.points, equipment, enhancements);
       const base = getAttackDamage(slot, equipment, enhancements).total;
 
       // 2-5) Crit roll, strength, crit damage, and the target's defence
