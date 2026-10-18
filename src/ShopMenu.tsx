@@ -178,7 +178,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
     if (current.coins < price) {
       throw new PurchaseError(
         "cant_afford",
-        `${entry.name} costs ${price} coins, but you only have ${current.coins}.`
+        `${entry.name} costs ${price} coins, but you can't afford that haha`
       );
     }
 

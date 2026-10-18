@@ -6,8 +6,7 @@ import {
   onAuthStateChanged,
   type User,
 } from "firebase/auth";
-import { doc, runTransaction, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "./firebase";
+import { auth } from "./firebaseAuth";
 
 export const USERNAME_MIN_LENGTH = 3;
 export const USERNAME_MAX_LENGTH = 16;
@@ -23,6 +22,10 @@ export async function signUp(email: string, password: string, username: string) 
 
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   try {
+    const [{ doc, runTransaction, serverTimestamp }, { db }] = await Promise.all([
+      import("firebase/firestore"),
+      import("./firebase"),
+    ]);
     await runTransaction(db, async (tx) => {
       const nameRef = doc(db, "usernames", username.toLowerCase());
       if ((await tx.get(nameRef)).exists()) throw new Error("That username is taken.");

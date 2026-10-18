@@ -31,7 +31,7 @@ export function checkLevel(name: string, required: number | undefined, level: nu
   if (required !== undefined && level < required) {
     throw new PurchaseError(
       "level_too_low",
-      `${name} requires level ${required}, but you're level ${level}.`
+      `${name} requires level ${required}, but clearly you can't read`
     );
   }
 }
@@ -47,14 +47,14 @@ export function whyCantApply(
   if (entry.kind === "enhancement") {
     const max = getMaxEnhancements(item, extraSlots);
     return appliedCount >= max
-      ? new PurchaseError("slots_full", `${item.name} already has the maximum of ${max} enhancements.`)
+      ? new PurchaseError("slots_full", `You've already maxed ${item.name}. Not hypermaxed though ;)`)
       : null;
   }
   return canExpandSlots(item)
     ? null
     : new PurchaseError(
         "cant_expand",
-        `${item.name} has no enhancement slots, so it can't be expanded.`
+        `You can't use an expander on an item with no enhancement slots... sorry!`
       );
 }
 
@@ -91,11 +91,11 @@ export async function purchase(
         throw candidates.length === 1
           ? new PurchaseError(
               "already_owned",
-              `You already own a ${getItemType(entry.type).label}. Salvage it first if you want a new one.`
+              `You already own this item. Why do you need another one?`
             )
           : new PurchaseError(
               "no_free_slot",
-              `All ${candidates.length} of your spell slots are full. Salvage a spell first.`
+              `You already have max spells. Save some for the rest of us :c`
             );
       }
       change = { [`equipment.${free}`]: entry.id };
@@ -118,7 +118,7 @@ export async function purchase(
     if (coins < price) {
       throw new PurchaseError(
         "cant_afford",
-        `${entry.name} costs ${price} coins, but you only have ${coins}.`
+        `${entry.name} costs ${price} coins, but you can't afford that haha`
       );
     }
 

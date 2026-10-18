@@ -4,26 +4,26 @@ import type { PurchaseFailure } from "./shop";
 import type { ConfirmOptions, PopupOptions } from "./usePopup";
 
 const ACTION_FAILURE_TITLES: Record<ActionFailure, string> = {
-  no_item: "Nothing to use",
-  target_gone: "Target not found",
-  target_down: "Target is down",
-  actor_dead: "You're dead",
-  not_started: "Game not started",
-  on_cooldown: "On cooldown",
-  not_enough_mana: "Not enough mana",
-  nothing_to_heal: "Nothing to heal",
-  invalid: "Can't do that",
+  no_item: "The Mbappé Special",
+  target_gone: "Target is a coward",
+  target_down: "Target is already deadge",
+  actor_dead: "YOU are already deadge",
+  not_started: "Chill outtttt",
+  on_cooldown: "Keep spam clicking :)",
+  not_enough_mana: "L mana sustain tbh",
+  nothing_to_heal: "Being a healer in a full HP lobby be like",
+  invalid: "Nuh uh",
 };
 
 const PURCHASE_FAILURE_TITLES: Record<PurchaseFailure, string> = {
-  cant_afford: "Can't afford that",
-  already_owned: "Already owned",
-  no_free_slot: "No free slot",
-  slots_full: "No enhancement slots",
-  nothing_to_enhance: "Nothing to enhance",
-  cant_expand: "Can't expand",
-  level_too_low: "Level too low",
-  invalid: "Not available",
+  cant_afford: "You're broke... how shocking",
+  already_owned: "Biblical greed",
+  no_free_slot: "Scalper prevention system",
+  slots_full: "Out of magic!",
+  nothing_to_enhance: "An engine with no car",
+  cant_expand: "Searching for a slot that doesn't exist",
+  level_too_low: "Imagine still early game",
+  invalid: "What !!",
 };
 
 const genericErrorMessage = "Something went wrong. Please try again. Contact @iaminnocent4298 if this error persists";

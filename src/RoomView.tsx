@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { ROOM_MODES, getStartMs, leaveRoom, startGame } from "./rooms";
 import { isDead } from "./stats";
 import GameClock from "./GameClock";
-import StatsTab from "./StatsTab";
-import ActionTab from "./ActionTab";
-import LogTab from "./LogTab";
-import ChangelogTab from "./ChangelogTab";
 import { popupMessages } from "./PopupMessages";
 import { usePopup } from "./usePopup";
 import { useRoomData } from "./useRoomData";
+
+const StatsTab = lazy(() => import("./StatsTab"));
+const ActionTab = lazy(() => import("./ActionTab"));
+const LogTab = lazy(() => import("./LogTab"));
+const ChangelogTab = lazy(() => import("./ChangelogTab"));
 
 const TABS = [
   { id: "stats", label: "Stats" },
@@ -141,17 +142,19 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
           </nav>
 
           <main role="tabpanel">
-            {tab === "stats" && <StatsTab uid={uid} />}
-            {tab === "action" &&
-              (dead ? (
-                <p className="dead-note">
-                  Dead players can't take actions. Follow the game on the Stats and Log tabs.
-                </p>
-              ) : (
-                <ActionTab room={room} uid={uid} deadIds={deadIds} />
-              ))}
-            {tab === "log" && <LogTab room={room} />}
-            {tab === "changelog" && <ChangelogTab />}
+            <Suspense fallback={<p>Loading tab...</p>}>
+              {tab === "stats" && <StatsTab uid={uid} />}
+              {tab === "action" &&
+                (dead ? (
+                  <p className="dead-note">
+                    Dead players can't take actions. Follow the game on the Stats and Log tabs.
+                  </p>
+                ) : (
+                  <ActionTab room={room} uid={uid} deadIds={deadIds} />
+                ))}
+              {tab === "log" && <LogTab room={room} />}
+              {tab === "changelog" && <ChangelogTab />}
+            </Suspense>
           </main>
         </>
       )}

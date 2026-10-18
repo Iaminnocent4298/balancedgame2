@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useRoomData } from "./useRoomData";
 import { youFirst, type Room } from "./rooms";
 import { ACTION_KINDS, GEAR_SLOTS, SLOTS, SPELL_SLOTS, type SlotId } from "./items";
@@ -7,11 +7,12 @@ import { ActionError, performAction } from "./action";
 import { popupMessages } from "./PopupMessages";
 import Countdown from "./Countdown";
 import CatalogTooltip from "./CatalogTooltip";
-import EquipmentMenu from "./EquipmentMenu";
-import PointsMenu from "./PointsMenu";
-import ShopMenu from "./ShopMenu";
 import { SHOPS, type ShopId } from "./shops";
 import { usePopup, type Choice } from "./usePopup";
+
+const EquipmentMenu = lazy(() => import("./EquipmentMenu"));
+const PointsMenu = lazy(() => import("./PointsMenu"));
+const ShopMenu = lazy(() => import("./ShopMenu"));
 
 type MenuId = "gear" | "spells";
 type View = "main" | "points" | MenuId | ShopId;
@@ -134,25 +135,37 @@ export default function ActionTab({
     }
   }
 
-  if (view === "points") return <PointsMenu uid={uid} onBack={() => setView("main")} />;
+  if (view === "points") {
+    return (
+      <Suspense fallback={<p>Loading points...</p>}>
+        <PointsMenu uid={uid} onBack={() => setView("main")} />
+      </Suspense>
+    );
+  }
 
   if (isShop(view)) {
-    return <ShopMenu shopId={view} room={room} uid={uid} onBack={() => setView("main")} />;
+    return (
+      <Suspense fallback={<p>Loading shop...</p>}>
+        <ShopMenu shopId={view} room={room} uid={uid} onBack={() => setView("main")} />
+      </Suspense>
+    );
   }
 
   if (view !== "main") {
     if (!loadout) return <p>Loading...</p>;
     const menu = MENUS[view];
     return (
-      <EquipmentMenu
-        title={menu.title}
-        slots={menu.slots}
-        equipment={loadout.equipment}
-        enhancements={loadout.enhancements}
-        extraSlots={loadout.extraSlots}
-        uid={uid}
-        onBack={() => setView("main")}
-      />
+      <Suspense fallback={<p>Loading inventory...</p>}>
+        <EquipmentMenu
+          title={menu.title}
+          slots={menu.slots}
+          equipment={loadout.equipment}
+          enhancements={loadout.enhancements}
+          extraSlots={loadout.extraSlots}
+          uid={uid}
+          onBack={() => setView("main")}
+        />
+      </Suspense>
     );
   }
 

@@ -149,7 +149,7 @@ export async function performAction(
     if (actorVitals.mana < manaCost) {
       throw new ActionError(
         "not_enough_mana",
-        `${item.name} costs ${manaCost} mana, which is clearly too much for your current mana bar`
+        `You need ${manaCost} mana to cast this spell, which is clearly too much for your current mana bar`
       );
     }
 
