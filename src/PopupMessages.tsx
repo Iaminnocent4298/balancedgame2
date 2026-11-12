@@ -1,5 +1,5 @@
 import type { ActionFailure } from "./action";
-import type { Enhancement, Expander, Item } from "./items";
+import type { AttackMode, Enhancement, Expander, Item } from "./items";
 import type { PurchaseFailure } from "./shop";
 import type { ConfirmOptions, PopupOptions } from "./usePopup";
 
@@ -38,6 +38,10 @@ export const popupMessages = {
       title: "What are you gonna attack with-",
       message: "Purchase a weapon or a spell first silly :3",
     } satisfies PopupOptions,
+    noItemsForAttackMode: (): PopupOptions => ({
+      title: `What are you attacking with silly :3`,
+      message: "Try buying a weapon or spell of this attack type",
+    }),
     chooseItem: (targetName: string) => ({
       title: `Use on ${targetName}`,
       message: "Pick your method of attack (or heal):",

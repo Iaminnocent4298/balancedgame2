@@ -153,7 +153,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
       { title: "Spells", choices: owned.filter((o) => SPELL_SLOTS.includes(o.slot)).map(toChoice) },
     ].filter((g) => g.choices.length > 0);
 
-    return choosePopup<SlotId>({ title: opts.title, message: opts.message, groups });
+    return choosePopup<SlotId>({ title: opts.title, message: opts.message, groups, wide: true });
   }
 
   async function buyItem(entry: Item, price: number) {

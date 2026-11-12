@@ -9,10 +9,16 @@ import {
 type Active =
   | { kind: "message"; options: PopupOptions }
   | { kind: "confirm"; options: ConfirmOptions; resolve: (ok: boolean) => void }
-  | { kind: "choice"; options: ChoiceOptions<unknown>; resolve: (value: unknown) => void };
+  | {
+      kind: "choice";
+      options: ChoiceOptions<unknown>;
+      resolve: (value: unknown) => void;
+      multiple: boolean;
+    };
 
 export default function PopupProvider({ children }: { children: ReactNode }) {
   const [active, setActive] = useState<Active | null>(null);
+  const [selectedChoices, setSelectedChoices] = useState<unknown[]>([]);
   const dialogRef = useRef<HTMLDivElement>(null);
   const previousFocus = useRef<HTMLElement | null>(null);
   // How to answer the open popup if it's dismissed (false for confirm, null for choice)
@@ -44,6 +50,7 @@ export default function PopupProvider({ children }: { children: ReactNode }) {
         : next.kind === "choice"
           ? () => next.resolve(null)
           : null;
+    setSelectedChoices([]);
     setActive(next);
   }, []);
 
@@ -77,6 +84,19 @@ export default function PopupProvider({ children }: { children: ReactNode }) {
           kind: "choice",
           options: options as ChoiceOptions<unknown>,
           resolve: resolve as (value: unknown) => void,
+          multiple: false,
+        })
+      ),
+    [open]
+  );
+  const choosePopupMany = useCallback(
+    <T,>(options: ChoiceOptions<T>) =>
+      new Promise<T[] | null>((resolve) =>
+        open({
+          kind: "choice",
+          options: options as ChoiceOptions<unknown>,
+          resolve: resolve as (value: unknown) => void,
+          multiple: true,
         })
       ),
     [open]
@@ -109,8 +129,8 @@ export default function PopupProvider({ children }: { children: ReactNode }) {
   }, [active, dismiss]);
 
   const value = useMemo(
-    () => ({ showPopup, closePopup: dismiss, confirmPopup, choosePopup }),
-    [showPopup, dismiss, confirmPopup, choosePopup]
+    () => ({ showPopup, closePopup: dismiss, confirmPopup, choosePopup, choosePopupMany }),
+    [showPopup, dismiss, confirmPopup, choosePopup, choosePopupMany]
   );
 
   return (
@@ -125,7 +145,9 @@ export default function PopupProvider({ children }: { children: ReactNode }) {
         >
           <div
             ref={dialogRef}
-            className={`box popup${active.kind === "choice" ? " popup-wide" : ""}`}
+            className={`box popup${
+              active.kind === "choice" && active.options.wide ? " popup-wide" : ""
+            }`}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby={active.options.title ? "popup-title" : undefined}
@@ -150,20 +172,51 @@ export default function PopupProvider({ children }: { children: ReactNode }) {
                           const stillLocked =
                             choice.lockedUntil !== undefined && choice.lockedUntil > Date.now();
                           if (!choice.disabled && !stillLocked) {
-                            finish(() => active.resolve(choice.value));
+                            if (active.multiple) {
+                              setSelectedChoices((current) =>
+                                current.includes(choice.value)
+                                  ? current.filter((value) => value !== choice.value)
+                                  : [...current, choice.value]
+                              );
+                            } else {
+                              finish(() => active.resolve(choice.value));
+                            }
                           }
                         };
+                        const selected = selectedChoices.includes(choice.value);
                         const card = (
                           <div
-                            className={`choice-card${disabled ? " choice-card-disabled" : ""}`}
+                            className={`choice-card${active.multiple ? " choice-card-multiple" : ""}${
+                              disabled ? " choice-card-disabled" : ""
+                            }`}
                             onClick={pick}
                           >
-                            {choice.label}
-                            <button className="choice-pick" disabled={disabled}>
-                              {locked
-                                ? (choice.lockedLabel ?? "Locked")
-                                : (choice.buttonLabel ?? "Choose")}
-                            </button>
+                            {active.multiple ? (
+                              <>
+                                <span className="choice-label">{choice.label}</span>
+                                <input
+                                  className="choice-checkbox"
+                                  type="checkbox"
+                                  checked={selected}
+                                  disabled={disabled}
+                                  aria-label="Select target"
+                                  onClick={(event) => event.stopPropagation()}
+                                  onChange={(event) => {
+                                    event.stopPropagation();
+                                    pick();
+                                  }}
+                                />
+                              </>
+                            ) : (
+                              <>
+                                {choice.label}
+                                <button className="choice-pick" disabled={disabled}>
+                                  {locked
+                                    ? (choice.lockedLabel ?? "Locked")
+                                    : (choice.buttonLabel ?? "Choose")}
+                                </button>
+                              </>
+                            )}
                           </div>
                         );
                         const tip = locked ? (choice.lockedTooltip ?? choice.tooltip) : choice.tooltip;
@@ -189,7 +242,17 @@ export default function PopupProvider({ children }: { children: ReactNode }) {
                 </>
               )}
               {active.kind === "choice" && (
-                <button onClick={dismiss}>{active.options.cancelLabel ?? "Cancel"}</button>
+                <>
+                  <button onClick={dismiss}>{active.options.cancelLabel ?? "Cancel"}</button>
+                  {active.multiple && (
+                    <button
+                      disabled={selectedChoices.length === 0}
+                      onClick={() => finish(() => active.resolve(selectedChoices))}
+                    >
+                      Attack
+                    </button>
+                  )}
+                </>
               )}
               {active.kind === "message" && (
                 <button onClick={dismiss}>{active.options.buttonLabel ?? "OK"}</button>

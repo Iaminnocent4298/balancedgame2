@@ -35,6 +35,7 @@ export type ChoiceOptions<T> = {
   message?: ReactNode;
   groups: ChoiceGroup<T>[]; // one row each, top to bottom
   cancelLabel?: string; // defaults to "Cancel"
+  wide?: boolean; // use the wide layout for large equipment/shop selection grids
 };
 
 type PopupContextValue = {
@@ -45,6 +46,8 @@ type PopupContextValue = {
   confirmPopup: (options: ConfirmOptions) => Promise<boolean>;
   // Resolves with the clicked choice's value, or null if they cancel
   choosePopup: <T>(options: ChoiceOptions<T>) => Promise<T | null>;
+  // Resolves with the selected values after confirmation, or null if they cancel
+  choosePopupMany: <T>(options: ChoiceOptions<T>) => Promise<T[] | null>;
 };
 
 export const PopupContext = createContext<PopupContextValue | null>(null);

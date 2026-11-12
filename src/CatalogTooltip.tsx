@@ -1,7 +1,7 @@
 import { ENHANCEMENTS } from "./catalog";
 import { formatNumber } from "./format";
 import {
-  getItemType, getMaxEnhancements, getRarity, kindLabel, type CatalogEntry,
+  getAttackMode, getItemType, getMaxEnhancements, getRarity, kindLabel, type CatalogEntry,
 } from "./items";
 import { describeField } from "./stats";
 import StatList from "./StatList";
@@ -57,6 +57,12 @@ export default function CatalogTooltip({ entry, enhancements, extraSlots }: Prop
         ))}
 
       {entry.description && <p className="item-desc">{entry.description}</p>}
+
+      {item && getAttackMode(item.attackMode) && (
+        <div className={`attack-style-${getAttackMode(item.attackMode)}`}>
+          {getAttackMode(item.attackMode) === "multi" ? "Multi Target" : "Single Target"}
+        </div>
+      )}
 
       <div className={`item-rarity rarity-${entry.rarity}`}>
         {getRarity(entry.rarity).label}{" "}

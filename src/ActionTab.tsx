@@ -1,9 +1,12 @@
 import { lazy, Suspense, useState } from "react";
 import { useRoomData } from "./useRoomData";
 import { youFirst, type Room } from "./rooms";
-import { ACTION_KINDS, GEAR_SLOTS, SLOTS, SPELL_SLOTS, type SlotId } from "./items";
+import {
+  ACTION_KINDS, GEAR_SLOTS, getAttackMode, SLOTS, SPELL_SLOTS,
+  type AttackMode, type SlotId,
+} from "./items";
 import { getEquippedItem } from "./catalog";
-import { ActionError, performAction } from "./action";
+import { ActionError, performAction, performMultiAction } from "./action";
 import { popupMessages } from "./PopupMessages";
 import Countdown from "./Countdown";
 import CatalogTooltip from "./CatalogTooltip";
@@ -48,81 +51,101 @@ const COLUMNS: { title: string; buttons: { label: string; view?: View }[] }[] = 
 export default function ActionTab({
   room, uid, deadIds,
 }: { room: Room; uid: string; deadIds: Set<string> }) {
-  const { showPopup, choosePopup } = usePopup();
+  const { showPopup, choosePopup, choosePopupMany } = usePopup();
   const [view, setView] = useState<View>("main");
   const [busy, setBusy] = useState(false);
   const { loadout } = useRoomData(); // undefined while loading
 
-  async function handleAction(targetId: string, targetName: string) {
+  async function handleAction(attackMode: AttackMode) {
     if (!loadout) return;
-
-    const options = SLOTS.flatMap(({ id: slot }) => {
-      const item = getEquippedItem(loadout.equipment, slot);
-      const kind = item ? ACTION_KINDS[item.type] : undefined;
-      if (!item || !kind) return [];
-      return [
-        {
+    setBusy(true);
+    try {
+      const options = SLOTS.flatMap(({ id: slot }) => {
+        const item = getEquippedItem(loadout.equipment, slot);
+        const kind = item ? ACTION_KINDS[item.type] : undefined;
+        if (!item || !kind || getAttackMode(item.attackMode) !== attackMode) return [];
+        return [{
           slot,
           item,
           kind,
           applied: loadout.enhancements[slot] ?? [],
           extra: loadout.extraSlots[slot] ?? 0,
           readyAt: loadout.cooldowns[slot] ?? 0,
-        },
-      ];
-    });
+        }];
+      });
 
-    if (options.length === 0) {
-      showPopup(popupMessages.action.noItemEquipped);
-      return;
-    }
-
-    const toChoice = ({
-      slot, item, kind, applied, extra, readyAt,
-    }: (typeof options)[number]): Choice<SlotId> => ({
-      value: slot,
-      buttonLabel: kind === "heal" ? "Heal" : "Attack",
-      // The popup unlocks the card by itself when this time passes
-      lockedUntil: readyAt > 0 ? readyAt : undefined,
-      lockedLabel: "On cooldown",
-      lockedTooltip: (
-        <>
-          On cooldown: <Countdown until={readyAt} /> remaining
-        </>
-      ),
-      label: <CatalogTooltip entry={item} enhancements={applied} extraSlots={extra} />,
-    });
-
-    const groups = [
-      {
-        title: "Weapon",
-        choices: options.filter((o) => !SPELL_SLOTS.includes(o.slot)).map(toChoice),
-      },
-      {
-        title: "Spells",
-        choices: options.filter((o) => SPELL_SLOTS.includes(o.slot)).map(toChoice),
-      },
-    ].filter((g) => g.choices.length > 0);
-
-    const chosen = await choosePopup<SlotId>({
-      ...popupMessages.action.chooseItem(targetId === uid ? "yourself" : targetName),
-      groups,
-    });
-
-    // Cancel, Escape, and clicking outside all give back null: do nothing
-    if (chosen === null) return;
-    if (!SLOTS.some((s) => s.id === chosen)) {
-      console.warn("The popup returned an unexpected value:", chosen);
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const r = await performAction(uid, targetId, chosen);
-
-      if (r.kind === "attack" && r.levelsGained > 0) {
-        showPopup(popupMessages.action.levelUp(r.levelsGained, r.apGained));
+      if (options.length === 0) {
+        showPopup(loadout.equipment.weapon || Object.values(loadout.equipment).some(Boolean)
+          ? popupMessages.action.noItemsForAttackMode()
+          : popupMessages.action.noItemEquipped);
+        return;
       }
+
+      const toChoice = ({
+        slot, item, applied, extra, readyAt,
+      }: (typeof options)[number]): Choice<SlotId> => ({
+        value: slot,
+        buttonLabel: "Choose",
+        lockedUntil: readyAt > 0 ? readyAt : undefined,
+        lockedLabel: "On cooldown",
+        lockedTooltip: (
+          <>
+            On cooldown: <Countdown until={readyAt} /> remaining
+          </>
+        ),
+        label: <CatalogTooltip entry={item} enhancements={applied} extraSlots={extra} />,
+      });
+
+      const groups = [
+        {
+          title: "Weapon",
+          choices: options.filter((o) => !SPELL_SLOTS.includes(o.slot)).map(toChoice),
+        },
+        {
+          title: "Spells",
+          choices: options.filter((o) => SPELL_SLOTS.includes(o.slot)).map(toChoice),
+        },
+      ].filter((g) => g.choices.length > 0);
+      const chosen = await choosePopup<SlotId>({
+        title: `Choose a ${attackMode === "single" ? "Single" : "Multi"} Attack`,
+        message: "Select a weapon or spell:",
+        groups,
+      });
+      if (chosen === null) return;
+      if (!SLOTS.some((s) => s.id === chosen)) {
+        console.warn("The popup returned an unexpected value:", chosen);
+        return;
+      }
+
+      const targetChoices = players.map(({ id, name }) => ({
+        value: id,
+        label: <>{name}{id === uid && " (you)"}</>,
+        disabled: deadIds.has(id),
+      }));
+      const targetOptions = {
+        title: attackMode === "single" ? "Choose a player to attack" : "Choose players to attack",
+        message: attackMode === "single"
+          ? "Select one player:"
+          : "Select one or more players:",
+        groups: [{ choices: targetChoices }],
+      };
+      const targets = attackMode === "single"
+        ? await choosePopup<string>(targetOptions).then((target) => target ? [target] : null)
+        : await choosePopupMany<string>(targetOptions);
+      if (targets === null) return;
+
+      const results = attackMode === "multi"
+        ? await performMultiAction(uid, targets, chosen)
+        : [await performAction(uid, targets[0], chosen)];
+      const levelsGained = results.reduce(
+        (sum, result) => sum + (result.kind === "attack" ? result.levelsGained : 0),
+        0
+      );
+      const apGained = results.reduce(
+        (sum, result) => sum + (result.kind === "attack" ? result.apGained : 0),
+        0
+      );
+      if (levelsGained > 0) showPopup(popupMessages.action.levelUp(levelsGained, apGained));
     } catch (err) {
       if (err instanceof ActionError) {
         showPopup(popupMessages.action.failure(err.reason, err.message));
@@ -179,20 +202,12 @@ export default function ActionTab({
       <section className="box action-col">
         <h2>Attack</h2>
         <div className="action-buttons">
-          {players.map(({ id, name }) => {
-            const down = deadIds.has(id);
-            return (
-              <button
-                key={id}
-                disabled={busy || !loadout || down}
-                onClick={() => handleAction(id, name)}
-              >
-                {name}
-                {id === uid && " (you)"}
-                {down && " (dead)"}
-              </button>
-            );
-          })}
+          <button disabled={busy || !loadout} onClick={() => handleAction("single")}>
+            Single Attack
+          </button>
+          <button disabled={busy || !loadout} onClick={() => handleAction("multi")}>
+            Multi Attack
+          </button>
         </div>
       </section>
 

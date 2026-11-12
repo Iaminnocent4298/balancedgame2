@@ -34,6 +34,11 @@ export const SPELL_TYPES: ItemTypeId[] = [
   "healing_spell", "damage_spell", "aoe_spell", "ultimate_spell",
 ];
 
+export type AttackMode = "single" | "multi";
+
+export const getAttackMode = (attackMode?: string): AttackMode | null =>
+  attackMode === "single" || attackMode === "multi" ? attackMode : null;
+
 // ===== The catalog: everything with a price and a rarity =====
 // Items (gear and spells), enhancements, and expanders all live in catalog.ts.
 export type ItemStats = Record<string, number>;
@@ -45,6 +50,7 @@ type Common = {
   value: number; // in coins. Also the shop price unless `price` is set
   description?: string; // lore
   levelReq?: number; // minimum level to buy it. Omit if none
+  attackMode?: string;
   shop?: ShopId | ShopId[]; // which shop(s) sell it. Omit if it isn't sold anywhere
   price?: number; // shop price, if it should differ from `value`
 };
@@ -204,10 +210,10 @@ export const slotsFor = (type: ItemTypeId): SlotId[] =>
 export type ActionKind = "attack" | "heal";
 
 // Item types that can be used on a player, and what they do.
-// AOE and ultimate spells aren't usable until their rules are designed.
 export const ACTION_KINDS: Partial<Record<ItemTypeId, ActionKind>> = {
   weapon: "attack",
   damage_spell: "attack",
+  aoe_spell: "attack",
   ultimate_spell: "attack",
   healing_spell: "heal",
 };
@@ -216,6 +222,7 @@ export const ACTION_KINDS: Partial<Record<ItemTypeId, ActionKind>> = {
 export const ATTACK_VERBS: Partial<Record<ItemTypeId, string>> = {
   weapon: "bonked",
   damage_spell: "spelled",
+  aoe_spell: "hit with",
   ultimate_spell: "exploded",
 };
 
