@@ -5,6 +5,7 @@ import { getBreakdowns } from "./statCalc";
 import { withDefaults, type Stats } from "./stats";
 import { round2 } from "./format";
 
+// Regen ticks twice per in-game day (a Speed-mode day is 1 minute, so a tick is 30 seconds)
 export const REGEN_INTERVAL_SPEED_MS = 30_000;
 
 export const getRegenInterval = (mode: RoomMode) => scaleToMode(REGEN_INTERVAL_SPEED_MS, mode);
@@ -25,6 +26,29 @@ export type RegenSubject = {
 };
 
 export type RegenResult = { health: number; mana: number; coins: number; tick: number };
+
+// The three numbers that change on every regen tick
+export type Vitals = { health: number; mana: number; coins: number };
+
+// A player's health, mana, and coins RIGHT NOW: the stored values, or the regen result if one is due
+export function vitalsOf(stats: Stats | null | undefined, regen: RegenResult | null): Vitals {
+  const s = withDefaults(stats);
+  return {
+    health: regen?.health ?? s.health,
+    mana: regen?.mana ?? s.mana,
+    coins: regen?.coins ?? s.coins,
+  };
+}
+
+// The Firestore fields to write for those vitals, plus the regen counter if regen was collected
+export function regenWrite(vitals: Vitals, regen: RegenResult | null): Record<string, number> {
+  return {
+    "stats.health": vitals.health,
+    "stats.mana": vitals.mana,
+    "stats.coins": vitals.coins,
+    ...(regen ? { regenTick: regen.tick } : {}),
+  };
+}
 
 // Applies every tick that has happened since the player's last one.
 // Returns null if none are due. Dead players don't regen or earn coins,

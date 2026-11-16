@@ -1,8 +1,9 @@
 import { lazy, Suspense, useState } from "react";
-import { ROOM_MODES, getStartMs, leaveRoom, startGame } from "./rooms";
+import { getStartMs, leaveRoom, startGame } from "./rooms";
 import { isDead } from "./stats";
-import GameClock from "./GameClock";
 import { popupMessages } from "./PopupMessages";
+import RoomInfo from "./RoomInfo";
+import TabBar from "./TabBar";
 import { usePopup } from "./usePopup";
 import { useRoomData } from "./useRoomData";
 
@@ -21,12 +22,10 @@ type TabId = (typeof TABS)[number]["id"];
 
 export default function RoomView({ uid, roomId }: { uid: string; roomId: string }) {
   const { showPopup } = usePopup();
-  // undefined = loading, null = room doesn't exist
-  // const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
   const [tab, setTab] = useState<TabId>("stats");
 
-  const { room, players } = useRoomData();
+  const { room, players } = useRoomData(); // room: undefined = loading, null = doesn't exist
 
   if (room === undefined) return <p>Loading room...</p>;
   if (room === null) {
@@ -38,7 +37,6 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
     );
   }
 
-  const modeLabel = ROOM_MODES.find((m) => m.id === room.mode)?.label ?? room.mode;
   const started = getStartMs(room) !== null;
   const isHost = room.hostId === uid;
   const memberCount = Object.keys(room.members).length;
@@ -46,12 +44,6 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
   // Dead players can only spectate
   const dead = isDead(players?.find((p) => p.id === uid)?.stats);
   const deadIds = new Set((players ?? []).filter((p) => isDead(p.stats)).map((p) => p.id));
-
-  // async function copyCode() {
-  //   await navigator.clipboard.writeText(room!.id);
-  //   setCopied(true);
-  //   setTimeout(() => setCopied(false), 1500);
-  // }
 
   async function handleStart() {
     setStarting(true);
@@ -67,27 +59,7 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
 
   return (
     <div>
-      {/* Info boxes: always visible */}
-      <div className="info-row">
-        <section className="box info-box">
-          <h2>Room info</h2>
-          <ul className="info-list">
-            <li>Name: {room.name}</li>
-            <li>
-              Code: <strong className="room-code">{room.id}</strong>{" "}
-            </li>
-            <li>Type: {modeLabel}</li>
-            <li>
-              Players: {memberCount}/{room.maxPlayers}
-            </li>
-          </ul>
-        </section>
-
-        <section className="box info-box">
-          <h2>Game info</h2>
-          <GameClock room={room} />
-        </section>
-      </div>
+      <RoomInfo room={room} />
 
       <div className="center-row">
         <button onClick={() => leaveRoom(uid)}>Leave room</button>
@@ -127,19 +99,7 @@ export default function RoomView({ uid, roomId }: { uid: string; roomId: string 
         <>
           {dead && <div className="box dead-banner">☠ You have died. You can only spectate now.</div>}
 
-          <nav className="tabs" role="tablist">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                className="tab"
-                role="tab"
-                aria-selected={tab === t.id}
-                onClick={() => setTab(t.id)}
-              >
-                {t.label}
-              </button>
-            ))}
-          </nav>
+          <TabBar tabs={TABS} active={tab} onChange={setTab} />
 
           <main role="tabpanel">
             <Suspense fallback={<p>Loading tab...</p>}>

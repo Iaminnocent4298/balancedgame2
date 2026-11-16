@@ -1,6 +1,7 @@
 import { doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
-import { computeRegen, getRegenTick, type RegenSubject } from "./regen";
+import type { PlayerDoc } from "./player";
+import { computeRegen, getRegenTick, regenWrite, vitalsOf } from "./regen";
 import { getStartMs, type Room } from "./rooms";
 
 // Saves the health, mana, and coin ticks you've earned but haven't been paid yet.
@@ -11,19 +12,12 @@ export async function collectRegen(uid: string, room: Room): Promise<void> {
 
   const playerRef = doc(db, "players", uid);
   await runTransaction(db, async (tx) => {
-    const data = (await tx.get(playerRef)).data() as
-      | (RegenSubject & { roomId?: string | null })
-      | undefined;
+    const data = (await tx.get(playerRef)).data() as PlayerDoc | undefined;
     if (!data?.roomId) return;
 
     const regen = computeRegen(data, getRegenTick(room.mode, startMs, Date.now()));
     if (!regen) return;
 
-    tx.update(playerRef, {
-      "stats.health": regen.health,
-      "stats.mana": regen.mana,
-      "stats.coins": regen.coins,
-      regenTick: regen.tick,
-    });
+    tx.update(playerRef, regenWrite(vitalsOf(data.stats, regen), regen));
   });
 }

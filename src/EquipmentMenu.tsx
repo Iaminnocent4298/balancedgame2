@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { salvageItem, type Enhancements, type Equipment, type ExtraSlots } from "./equipment";
 import { getSalvageValue, getSlot, slotAccepts, type Item, type SlotId } from "./items";
-import { ENHANCEMENTS, ITEMS } from "./catalog";
+import { ITEMS, resolveEnhancements } from "./catalog";
 import CatalogTooltip from "./CatalogTooltip";
 import { popupMessages } from "./PopupMessages";
 import { usePopup } from "./usePopup";
@@ -23,9 +23,7 @@ export default function EquipmentMenu({
   const [busy, setBusy] = useState(false);
 
   async function handleSalvage(slot: SlotId, item: Item) {
-    const appliedEnhancements = (enhancements[slot] ?? [])
-      .flatMap((id) => ENHANCEMENTS[id] ? [ENHANCEMENTS[id]] : []);
-    const refund = getSalvageValue(item, appliedEnhancements);
+    const refund = getSalvageValue(item, resolveEnhancements(enhancements[slot]));
     const count = enhancements[slot]?.length ?? 0;
     const extra = extraSlots[slot] ?? 0;
 
@@ -54,8 +52,6 @@ export default function EquipmentMenu({
         {slots.map((slot) => {
           const itemId = equipment[slot];
           const item: Item | undefined = itemId ? ITEMS[itemId] : undefined;
-          const appliedEnhancements = (enhancements[slot] ?? [])
-            .flatMap((id) => ENHANCEMENTS[id] ? [ENHANCEMENTS[id]] : []);
 
           return (
             <section key={slot} className="box equip-card">
@@ -74,7 +70,7 @@ export default function EquipmentMenu({
                     disabled={busy}
                     onClick={() => handleSalvage(slot, item)}
                   >
-                    Salvage (+{getSalvageValue(item, appliedEnhancements)} coins)
+                    Salvage (+{getSalvageValue(item, resolveEnhancements(enhancements[slot]))} coins)
                   </button>
                 </>
               ) : (

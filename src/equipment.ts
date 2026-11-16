@@ -1,9 +1,10 @@
 import { deleteField, doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
-import { getSalvageValue, slotAccepts, type SlotId } from "./items";
-import { ENHANCEMENTS, ITEMS } from "./catalog";
+import { getSalvageValue, type SlotId } from "./items";
+import { getEquippedItem, resolveEnhancements } from "./catalog";
+import type { PlayerDoc } from "./player";
 import { clampVitals } from "./regen";
-import { DEFAULT_STATS } from "./stats";
+import { withDefaults } from "./stats";
 
 // slot -> item id, e.g. { weapon: "iron_sword", spell1: "fireball" }. A missing slot means empty.
 export type Equipment = Partial<Record<SlotId, string>>;
@@ -33,26 +34,21 @@ export async function salvageItem(
   const playerRef = doc(db, "players", uid);
 
   return runTransaction(db, async (tx) => {
-    const snap = await tx.get(playerRef);
-    const data = snap.data();
+    const data = (await tx.get(playerRef)).data() as PlayerDoc | undefined;
 
-    const equipped = (data?.equipment as Equipment | undefined)?.[slot];
-    if (equipped !== expectedItemId) throw new Error("That item is no longer equipped.");
+    if (data?.equipment?.[slot] !== expectedItemId) throw new Error("That item is no longer equipped.");
+    const item = getEquippedItem(data.equipment, slot);
+    if (!item) throw new Error("That item can't be salvaged.");
 
-    const item = ITEMS[expectedItemId];
-    if (!item || !slotAccepts(slot, item.type)) throw new Error("That item can't be salvaged.");
-
-    const enhancementValues = ((data?.enhancements as Enhancements | undefined)?.[slot] ?? [])
-      .flatMap((id) => ENHANCEMENTS[id] ? [ENHANCEMENTS[id]] : []);
-    const refund = getSalvageValue(item, enhancementValues);
-    const coins = (data?.stats?.coins as number | undefined) ?? DEFAULT_STATS.coins;
+    const refund = getSalvageValue(item, resolveEnhancements(data.enhancements?.[slot]));
+    const coins = withDefaults(data.stats).coins;
 
     // Removing gear can lower max health or mana, so trim anything now over the max
-    const nextEquipment: Equipment = { ...(data?.equipment as Equipment | undefined) };
+    const nextEquipment: Equipment = { ...data.equipment };
     delete nextEquipment[slot];
-    const nextEnhancements: Enhancements = { ...(data?.enhancements as Enhancements | undefined) };
+    const nextEnhancements: Enhancements = { ...data.enhancements };
     delete nextEnhancements[slot];
-    const trim = clampVitals(data?.stats, data?.points, nextEquipment, nextEnhancements);
+    const trim = clampVitals(data.stats, data.points, nextEquipment, nextEnhancements);
 
     tx.update(playerRef, {
       [`equipment.${slot}`]: deleteField(),

@@ -1,12 +1,12 @@
 import { doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 import { CATALOG_BY_ID, getEquippedItem } from "./catalog";
-import type { Equipment } from "./equipment";
+import type { PlayerDoc } from "./player";
 import {
   canExpandSlots, getMaxEnhancements, slotsFor,
   type Enhancement, type Expander, type Item, type SlotId,
 } from "./items";
-import { DEFAULT_STATS } from "./stats";
+import { withDefaults } from "./stats";
 
 export type PurchaseFailure =
   | "cant_afford"
@@ -74,10 +74,9 @@ export async function purchase(
   const playerRef = doc(db, "players", uid);
 
   await runTransaction(db, async (tx) => {
-    const data = (await tx.get(playerRef)).data();
-    const coins = (data?.stats?.coins as number | undefined) ?? DEFAULT_STATS.coins;
-    const level = (data?.stats?.level as number | undefined) ?? DEFAULT_STATS.level;
-    const equipment = (data?.equipment as Equipment | undefined) ?? {};
+    const data = (await tx.get(playerRef)).data() as PlayerDoc | undefined;
+    const { coins, level } = withDefaults(data?.stats);
+    const equipment = data?.equipment ?? {};
 
     checkLevel(entry.name, entry.levelReq, level);
 
@@ -105,7 +104,7 @@ export async function purchase(
       if (!item) throw new PurchaseError("invalid", "That item is no longer equipped.");
 
       const applied: string[] = data?.enhancements?.[slot] ?? [];
-      const extra = (data?.extraSlots?.[slot] as number | undefined) ?? 0;
+      const extra = data?.extraSlots?.[slot] ?? 0;
       const blocked = whyCantApply(entry, item, applied.length, extra);
       if (blocked) throw blocked;
 

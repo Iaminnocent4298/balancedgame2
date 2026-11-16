@@ -3,9 +3,8 @@ import {
   type Timestamp,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { DEFAULT_STATS, type Stats } from "./stats";
-import type { Cooldowns, Enhancements, Equipment, ExtraSlots } from "./equipment";
 import type { LogEntry } from "./log";
+import { joinRoomFields, leaveRoomFields, type PlayerDoc } from "./player";
 
 export const ROOM_MODES = [
   { id: "speed", label: "Speed" },
@@ -35,7 +34,7 @@ export type Room = {
 
 // When the game started, or null if it hasn't yet.
 // Rooms made before this feature have no startedAt, so they count as started at creation.
-export function getStartMs(room: Room): number | null {
+export function getStartMs(room: Pick<Room, "startedAt" | "createdAt">): number | null {
   if (room.startedAt === undefined) return room.createdAt?.toMillis() ?? Date.now();
   return room.startedAt ? room.startedAt.toMillis() : null;
 }
@@ -96,18 +95,7 @@ export async function createRoom(
           createdAt: serverTimestamp(),
           startedAt: null,
         });
-        tx.update(playerRef, {
-          roomId: code,
-          stats: { ...DEFAULT_STATS },
-          points: {},
-          pointsChangedAt: deleteField(),
-          pointsChangedLevel: deleteField(),
-          equipment: {},
-          enhancements: {},
-          cooldowns: {},
-          extraSlots: {},
-          regenTick: 0,
-        });
+        tx.update(playerRef, joinRoomFields(code));
       });
       return code;
     } catch (err) {
@@ -141,18 +129,7 @@ export async function joinRoom(uid: string, rawCode: string) {
     }
 
     tx.update(roomRef, { [`members.${uid}`]: player.data()?.name ?? "Player" });
-    tx.update(playerRef, {
-      roomId: code,
-      stats: { ...DEFAULT_STATS },
-      points: {},
-      pointsChangedAt: deleteField(),
-      pointsChangedLevel: deleteField(),
-      equipment: {},
-      enhancements: {},
-      cooldowns: {},
-      extraSlots: {},
-      regenTick: 0,
-    });
+    tx.update(playerRef, joinRoomFields(code));
   });
 }
 
@@ -179,18 +156,7 @@ export async function leaveRoom(uid: string) {
         });
       }
     }
-    tx.update(playerRef, {
-      roomId: null,
-      stats: deleteField(),
-      points: deleteField(),
-      pointsChangedAt: deleteField(),
-      pointsChangedLevel: deleteField(),
-      equipment: deleteField(),
-      enhancements: deleteField(),
-      cooldowns: deleteField(),
-      regenTick: deleteField(),
-      extraSlots: deleteField(),
-    });
+    tx.update(playerRef, leaveRoomFields());
   });
 }
 
@@ -204,19 +170,8 @@ export function subscribeToRoom(roomId: string, onChange: (room: Room | null) =>
   );
 }
 
-export type RoomPlayer = {
-  id: string;
-  name: string;
-  stats: Stats | null;
-  points: Stats | null;
-  pointsChangedAt?: number;
-  pointsChangedLevel?: number;
-  equipment: Equipment | null;
-  enhancements: Enhancements | null;
-  cooldowns: Cooldowns | null;
-  extraSlots: ExtraSlots | null;
-  regenTick: number | null;
-};
+// One player in a room, as the screens see them
+export type RoomPlayer = PlayerDoc & { id: string; name: string };
 
 // Live list of everyone whose roomId matches this room's code
 export function subscribeToRoomPlayers(
@@ -226,19 +181,10 @@ export function subscribeToRoomPlayers(
   const q = query(collection(db, "players"), where("roomId", "==", roomId));
   return onSnapshot(q, (snap) =>
     onChange(
-      snap.docs.map((d) => ({
-        id: d.id,
-        name: d.data().name ?? "Player",
-        stats: (d.data().stats as Stats | undefined) ?? null,
-        points: (d.data().points as Stats | undefined) ?? null,
-        pointsChangedAt: d.data().pointsChangedAt as number | undefined,
-        pointsChangedLevel: d.data().pointsChangedLevel as number | undefined,
-        equipment: (d.data().equipment as Equipment | undefined) ?? null,
-        enhancements: (d.data().enhancements as Enhancements | undefined) ?? null,
-        cooldowns: (d.data().cooldowns as Cooldowns | undefined) ?? null,
-        extraSlots: (d.data().extraSlots as ExtraSlots | undefined) ?? null,
-        regenTick: (d.data().regenTick as number | undefined) ?? null,
-      }))
+      snap.docs.map((d) => {
+        const data = d.data() as PlayerDoc;
+        return { ...data, id: d.id, name: data.name ?? "Player" };
+      })
     )
   );
 }

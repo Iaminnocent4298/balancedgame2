@@ -1,7 +1,7 @@
-import { ENHANCEMENTS } from "./catalog";
+import { resolveEnhancements } from "./catalog";
 import { formatNumber } from "./format";
 import {
-  getAttackMode, getItemType, getMaxEnhancements, getRarity, kindLabel, type CatalogEntry,
+  getItemType, getMaxEnhancements, getRarity, kindLabel, type CatalogEntry,
 } from "./items";
 import { describeField } from "./stats";
 import StatList from "./StatList";
@@ -16,9 +16,7 @@ type Props = {
 export default function CatalogTooltip({ entry, enhancements, extraSlots }: Props) {
   const item = entry.kind === "item" ? entry : undefined;
   const maxEnhancements = item ? getMaxEnhancements(item, extraSlots) : 0;
-  const applied = (enhancements ?? []).flatMap((id) =>
-    ENHANCEMENTS[id] ? [ENHANCEMENTS[id]] : []
-  );
+  const applied = resolveEnhancements(enhancements);
   const totalValue = item
     ? item.value + applied.reduce((sum, enhancement) => sum + enhancement.value, 0)
     : entry.value;
@@ -58,9 +56,9 @@ export default function CatalogTooltip({ entry, enhancements, extraSlots }: Prop
 
       {entry.description && <p className="item-desc">{entry.description}</p>}
 
-      {item && getAttackMode(item.attackMode) && (
-        <div className={`attack-style-${getAttackMode(item.attackMode)}`}>
-          {getAttackMode(item.attackMode) === "multi" ? "Multi Target" : "Single Target"}
+      {item?.attackMode && (
+        <div className={`attack-style-${item.attackMode}`}>
+          {item.attackMode === "multi" ? "Multi Target" : "Single Target"}
         </div>
       )}
 

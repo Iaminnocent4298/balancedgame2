@@ -2,11 +2,11 @@ import { lazy, Suspense, useState } from "react";
 import { useRoomData } from "./useRoomData";
 import { youFirst, type Room } from "./rooms";
 import {
-  ACTION_KINDS, GEAR_SLOTS, getAttackMode, SLOTS, SPELL_SLOTS,
+  ACTION_KINDS, GEAR_SLOTS, SLOTS, SPELL_SLOTS,
   type AttackMode, type SlotId,
 } from "./items";
 import { getEquippedItem } from "./catalog";
-import { ActionError, performAction, performMultiAction } from "./action";
+import { ActionError, performAction } from "./action";
 import { popupMessages } from "./PopupMessages";
 import Countdown from "./Countdown";
 import CatalogTooltip from "./CatalogTooltip";
@@ -63,7 +63,7 @@ export default function ActionTab({
       const options = SLOTS.flatMap(({ id: slot }) => {
         const item = getEquippedItem(loadout.equipment, slot);
         const kind = item ? ACTION_KINDS[item.type] : undefined;
-        if (!item || !kind || getAttackMode(item.attackMode) !== attackMode) return [];
+        if (!item || !kind || item.attackMode !== attackMode) return [];
         return [{
           slot,
           item,
@@ -134,9 +134,7 @@ export default function ActionTab({
         : await choosePopupMany<string>(targetOptions);
       if (targets === null) return;
 
-      const results = attackMode === "multi"
-        ? await performMultiAction(uid, targets, chosen)
-        : [await performAction(uid, targets[0], chosen)];
+      const results = await performAction(uid, targets, chosen);
       const levelsGained = results.reduce(
         (sum, result) => sum + (result.kind === "attack" ? result.levelsGained : 0),
         0

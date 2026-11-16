@@ -7,8 +7,8 @@ const MINUTE = 60_000;
 // Keep them whole numbers so every duration stays a clean number.
 export const TIME_MULTIPLIER: Record<RoomMode, number> = {
   speed: 1,
-  normal: 30, // a day takes 15x as long as in Speed
-  daily: 720, // a day takes 360x as long as in Speed
+  normal: 30, // a day takes 30x as long as in Speed
+  daily: 720, // a day takes 720x as long as in Speed
 };
 
 // Real-world length of one in-game day in Speed mode
@@ -16,7 +16,7 @@ const SPEED_DAY_MS = MINUTE;
 
 // Real-world length of one in-game day in each mode (what the clock uses)
 export const DAY_LENGTH_MS: Record<RoomMode, number> = {
-  speed: SPEED_DAY_MS * TIME_MULTIPLIER.speed, //  2 minutes
+  speed: SPEED_DAY_MS * TIME_MULTIPLIER.speed, //  1 minute
   normal: SPEED_DAY_MS * TIME_MULTIPLIER.normal, // 30 minutes
   daily: SPEED_DAY_MS * TIME_MULTIPLIER.daily, //  12 hours
 };
@@ -25,15 +25,6 @@ export const DAY_LENGTH_MS: Record<RoomMode, number> = {
 // for the given mode. USE THIS for cooldowns, regen ticks, and so on.
 export function scaleToMode(speedMs: number, mode: RoomMode): number {
   return speedMs * TIME_MULTIPLIER[mode];
-}
-
-// One in-game hour lasts exactly 5 seconds in Speed mode (2 minutes / 24)
-const SPEED_GAME_HOUR_MS = SPEED_DAY_MS / 24;
-
-// Converts a number of in-game hours into real milliseconds,
-// e.g. gameHoursToMs(2, mode) for "a cooldown of 2 game hours".
-export function gameHoursToMs(hours: number, mode: RoomMode): number {
-  return hours * SPEED_GAME_HOUR_MS * TIME_MULTIPLIER[mode];
 }
 
 const SEASONS = ["Winter", "Spring", "Summer", "Fall"] as const;
@@ -80,3 +71,6 @@ export function getSeasonInfo(mode: RoomMode, startedAtMs: number, nowMs: number
     msRemaining: seasonLength - (elapsed % seasonLength), // real time until the next season
   };
 }
+
+// The current real time, for code that runs when something is clicked (not while a screen is drawn)
+export const realNow = () => Date.now();

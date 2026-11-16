@@ -1,18 +1,17 @@
-import { doc, runTransaction, type Timestamp } from "firebase/firestore";
+import { doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 import { getAttackDamage, getHealing, resolveHit } from "./attackCalc";
-import { getAttackCooldownMs } from "./cooldowns";
-import type { Cooldowns, Enhancements, Equipment } from "./equipment";
-import { formatCountdown } from "./format";
 import { getEquippedItem } from "./catalog";
-import { ACTION_KINDS, ATTACK_VERBS, getAttackMode, type SlotId } from "./items";
+import { getAttackCooldownMs } from "./cooldowns";
+import { formatCountdown, round2 } from "./format";
+import { ACTION_KINDS, ATTACK_VERBS, type SlotId } from "./items";
 import { applyXp } from "./leveling";
 import { pushLog, type LogEntry } from "./log";
-import { computeRegen, getRegenTick, type RegenResult } from "./regen";
-import type { RoomMode } from "./rooms";
+import type { PlayerDoc } from "./player";
+import { computeRegen, getRegenTick, regenWrite, vitalsOf, type RegenResult, type Vitals } from "./regen";
+import { MAX_PLAYERS, getStartMs, type Room } from "./rooms";
 import { getBreakdowns } from "./statCalc";
-import { withDefaults, type Stats } from "./stats";
-import { round2 } from "./format";
+import { withDefaults } from "./stats";
 
 export type ActionFailure =
   | "no_item"
@@ -46,305 +45,107 @@ export type ActionResult =
     }
   | { kind: "heal"; healed: number; targetHealth: number };
 
-type PlayerData = {
-  name?: string;
-  roomId?: string | null;
-  stats?: Stats;
-  points?: Stats;
-  equipment?: Equipment;
-  enhancements?: Enhancements;
-  cooldowns?: Cooldowns;
-  regenTick?: number;
+// One chosen player, with their health, mana, and coins as they are right now
+type Target = {
+  id: string;
+  data: PlayerDoc;
+  self: boolean;
+  regen: RegenResult | null; // regen they had earned but not yet been paid
+  vitals: Vitals;
+  startHealth: number;
 };
 
-type Vitals = { health: number; mana: number; coins: number };
-
-// Uses the item in `slot` (a weapon or a spell) on `targetId`. Everything happens in one
-// step: the effect, the mana cost, the cooldown, the rewards, and the log line.
+// Uses the item in `slot` (a weapon or a spell) on one or more players. A single-target item needs
+// exactly one target. A multi-target item takes one to eight and is charged only once.
+// Everything happens in one step: the effects, the mana cost, the cooldown, the rewards, and the log.
 export async function performAction(
   actorId: string,
-  targetId: string,
+  targetIds: readonly string[],
   slot: SlotId
-): Promise<ActionResult> {
+): Promise<ActionResult[]> {
+  const ids = [...new Set(targetIds)];
+  if (ids.length === 0 || ids.length > MAX_PLAYERS) {
+    throw new ActionError("invalid", `Choose between 1 and ${MAX_PLAYERS} targets.`);
+  }
+  if (ids.length !== targetIds.length) {
+    throw new ActionError("invalid", "A target can only be selected once.");
+  }
+
   const actorRef = doc(db, "players", actorId);
-  const targetRef = doc(db, "players", targetId);
-  const selfTarget = actorId === targetId;
 
   return runTransaction(db, async (tx) => {
     // Everything is read first, so the maths always uses the latest data
-    const actor = (await tx.get(actorRef)).data() as PlayerData | undefined;
-    const target = selfTarget ? actor : ((await tx.get(targetRef)).data() as PlayerData | undefined);
-
+    const actor = (await tx.get(actorRef)).data() as PlayerDoc | undefined;
     if (!actor?.roomId) throw new ActionError("invalid", "You're not in a room :c");
-    if (!target || target.roomId !== actor.roomId) {
-      throw new ActionError("target_gone", "That player left because they're a coward smh");
+
+    const chosen: { id: string; data: PlayerDoc; self: boolean }[] = [];
+    for (const id of ids) {
+      const self = id === actorId;
+      const data = self ? actor : ((await tx.get(doc(db, "players", id))).data() as PlayerDoc | undefined);
+      if (!data || data.roomId !== actor.roomId) {
+        throw new ActionError("target_gone", "That player left because they're a coward smh");
+      }
+      chosen.push({ id, data, self });
     }
 
     const roomRef = doc(db, "rooms", actor.roomId);
     const roomSnap = await tx.get(roomRef);
     if (!roomSnap.exists()) throw new ActionError("invalid", "This room no longer exists :c");
 
-    const room = roomSnap.data();
-    const startedAt = (room.startedAt === undefined ? room.createdAt : room.startedAt) as
-      | Timestamp
-      | null
-      | undefined;
-    if (!startedAt) throw new ActionError("not_started", "The game hasn't started yet, be patient... gosh");
-    const mode = room.mode as RoomMode;
+    const room = roomSnap.data() as Omit<Room, "id">;
+    const startMs = getStartMs(room);
+    if (startMs === null) throw new ActionError("not_started", "The game hasn't started yet, be patient... gosh");
     const now = Date.now();
-    const tick = getRegenTick(mode, startedAt.toMillis(), now);
+    const tick = getRegenTick(room.mode, startMs, now);
 
     // Regen each player has earned up to this moment (they may not have been online to collect it)
     const actorRegen = computeRegen(actor, tick);
-    const targetRegen = selfTarget ? actorRegen : computeRegen(target, tick);
-
-    const actorStats = withDefaults(actor.stats);
-    const targetStats = withDefaults(target.stats);
-    const actorVitals: Vitals = {
-      health: actorRegen?.health ?? actorStats.health,
-      mana: actorRegen?.mana ?? actorStats.mana,
-      coins: actorRegen?.coins ?? actorStats.coins,
-    };
-    const targetVitals: Vitals = selfTarget
-      ? actorVitals // the same person, so changes to one are changes to both
-      : {
-          health: targetRegen?.health ?? targetStats.health,
-          mana: targetRegen?.mana ?? targetStats.mana,
-          coins: targetRegen?.coins ?? targetStats.coins,
-        };
-    const targetStartHealth = targetVitals.health;
-
+    const actorVitals = vitalsOf(actor.stats, actorRegen);
     if (actorVitals.health <= 0) {
       throw new ActionError("actor_dead", "You're dead. This isn't BOTC, so you can only spectate.");
     }
 
+    // Hitting yourself shares the actor's numbers, so a change to one is a change to both
+    const targets: Target[] = chosen.map((c) => {
+      const regen = c.self ? actorRegen : computeRegen(c.data, tick);
+      const vitals = c.self ? actorVitals : vitalsOf(c.data.stats, regen);
+      return { ...c, regen, vitals, startHealth: vitals.health };
+    });
+
     // The item being used, and what it does
     const equipment = actor.equipment ?? {};
     const enhancements = actor.enhancements ?? {};
-    const mine = getBreakdowns(actor.stats, actor.points, equipment, enhancements);
     const item = getEquippedItem(equipment, slot);
     if (!item) {
       throw new ActionError("no_item", "That item has vanished... just kidding you removed it yourself");
     }
     const kind = ACTION_KINDS[item.type];
-    if (!kind) throw new ActionError("invalid", `${item.name} can't be used yet.`);
-    if (getAttackMode(item.attackMode) !== "single") {
-      throw new ActionError("invalid", `${item.name} can't be used for a single attack.`);
+    if (!kind || !item.attackMode) throw new ActionError("invalid", `${item.name} can't be used yet.`);
+    if (item.attackMode === "single" && targets.length !== 1) {
+      throw new ActionError("invalid", `${item.name} can only be used on one target.`);
     }
-
-    // The weapon has a cooldown. Spells don't: they cost mana instead
-    const cooldownMs = getAttackCooldownMs(slot, mode, mine.attackSpeed.total);
-    const readyAt = actor.cooldowns?.[slot] ?? 0;
-    if (cooldownMs > 0 && now < readyAt) {
-      throw new ActionError(
-        "on_cooldown",
-        `${item.name} is on cooldown for ${formatCountdown(readyAt - now)}.`
-      );
-    }
-
-    if (targetVitals.health <= 0) {
-      throw new ActionError(
-        "target_down",
-        kind === "heal" ? `Healing them is no use, they're already dead.` : `Why would you attack a dead player?`
-      );
-    }
-
-    const manaCost = item.manaCost ?? 0;
-    if (actorVitals.mana < manaCost) {
-      throw new ActionError(
-        "not_enough_mana",
-        `You need ${manaCost} mana to cast this spell, which is clearly too much for your current mana bar`
-      );
-    }
-
-    const theirs = getBreakdowns(target.stats, target.points, target.equipment, target.enhancements);
-    const actorName = actor.name ?? "Player";
-    const targetLogName = target.name ?? "Player";
-    const actorExtra: Record<string, number> = {};
-    const entries: LogEntry[] = []; // in the order things happened
-    let result: ActionResult;
-
-    if (kind === "heal") {
-      // A flat amount and/or a percentage of the target's max health, never past the max
-      const { raw, percent } = getHealing(slot, equipment, enhancements);
-      const maxHealth = Math.max(1, theirs.maxHealth.total);
-      const amount = raw + (maxHealth * percent) / 100;
-      if (!(amount > 0)) throw new ActionError("invalid", `That item doesn't perform healing capabilities`);
-
-      const newHealth = round2(Math.min(maxHealth, targetVitals.health + amount));
-      const healed = round2(newHealth - targetVitals.health);
-      if (healed <= 0) {
-        // Refused before anything is charged, so no mana is wasted
-        throw new ActionError("nothing_to_heal", `They're already at max hp, why would you heal them?`);
-      }
-
-      targetVitals.health = newHealth;
-      entries.push({
-        kind: "heal", at: now, healer: actorName, patient: targetLogName, amount: healed,
-      });
-      result = { kind: "heal", healed, targetHealth: newHealth };
-    } else {
-      // 1) Base damage: the selected item, plus damage on your armour
-      const base = getAttackDamage(slot, equipment, enhancements).total;
-
-      // 2-5) Crit roll, strength, crit damage, and the target's defence
-      const hit = resolveHit({
-        baseDamage: base,
-        strength: mine.strength.total,
-        critChance: mine.critChance.total,
-        critDamage: mine.critDamage.total,
-        defence: theirs.defence.total,
-      });
-
-      // 6) Damage to the target
-      const newHealth = Math.max(0, targetVitals.health - hit.damage);
-      targetVitals.health = newHealth;
-
-      // 7) XP equal to the damage, with level-ups. Hitting yourself earns nothing.
-      // Coins are no longer earned from damage: they arrive on the coin tick (regen.ts).
-      const progress = selfTarget
-        ? null
-        : applyXp(actorStats.level, actorStats.levelXp, actorStats.nextLevelXp, hit.damage);
-
-      if (progress) {
-        Object.assign(actorExtra, {
-          "stats.level": progress.level,
-          "stats.levelXp": progress.levelXp,
-          "stats.nextLevelXp": progress.nextLevelXp,
-          "stats.abilityPoints": actorStats.abilityPoints + progress.apGained,
-        });
-      }
-
-      entries.push({
-        kind: "attack",
-        at: now,
-        attacker: actorName,
-        victim: targetLogName,
-        verb: ATTACK_VERBS[item.type] ?? "attacked",
-        damage: hit.damage,
-        crit: hit.crit,
-      });
-      // The death message comes after the final hit, so it sits above it in the newest-first log
-      if (newHealth <= 0) entries.push({ kind: "death", at: now, player: targetLogName });
-
-      result = {
-        kind: "attack",
-        damage: hit.damage,
-        crit: hit.crit,
-        targetHealth: newHealth,
-        xpGained: progress ? hit.damage : 0,
-        levelsGained: progress?.levelsGained ?? 0,
-        apGained: progress?.apGained ?? 0,
-      };
-    }
-
-    // Spend mana (spells) and start the cooldown (weapon)
-    actorVitals.mana -= manaCost;
-    if (cooldownMs > 0) actorExtra[`cooldowns.${slot}`] = now + cooldownMs;
-
-    // Write everything: each player's health and mana (with any regen collected)
-    const vitalsWrite = (v: Vitals, regen: RegenResult | null): Record<string, number> => ({
-      "stats.health": v.health,
-      "stats.mana": v.mana,
-      "stats.coins": v.coins,
-      ...(regen ? { regenTick: regen.tick } : {}),
-    });
-
-    tx.update(actorRef, { ...vitalsWrite(actorVitals, actorRegen), ...actorExtra });
-    if (!selfTarget && (targetRegen || targetVitals.health !== targetStartHealth)) {
-      tx.update(targetRef, vitalsWrite(targetVitals, targetRegen));
-    }
-
-    let log = room.log as LogEntry[] | undefined;
-    for (const entry of entries) log = pushLog(log, entry);
-    tx.update(roomRef, { log });
-
-    return result;
-  });
-}
-
-// Applies one multi-attack use to every selected target, charging the item once.
-export async function performMultiAction(
-  actorId: string,
-  targetIds: readonly string[],
-  slot: SlotId
-): Promise<ActionResult[]> {
-  const uniqueTargetIds = [...new Set(targetIds)];
-  if (uniqueTargetIds.length === 0 || uniqueTargetIds.length > 8) {
-    throw new ActionError("invalid", "Choose between one and eight targets.");
-  }
-  if (uniqueTargetIds.length !== targetIds.length) {
-    throw new ActionError("invalid", "A target can only be selected once.");
-  }
-
-  const actorRef = doc(db, "players", actorId);
-  const targetRefs = uniqueTargetIds.map((id) => doc(db, "players", id));
-
-  return runTransaction(db, async (tx) => {
-    const actor = (await tx.get(actorRef)).data() as PlayerData | undefined;
-    if (!actor?.roomId) throw new ActionError("invalid", "You're not in a room :c");
-
-    const targets: {
-      id: string;
-      ref: ReturnType<typeof doc>;
-      data: PlayerData;
-      selfTarget: boolean;
-    }[] = [];
-    for (let i = 0; i < uniqueTargetIds.length; i++) {
-      const id = uniqueTargetIds[i];
-      const selfTarget = id === actorId;
-      const data = selfTarget
-        ? actor
-        : ((await tx.get(targetRefs[i])).data() as PlayerData | undefined);
-      if (!data || data.roomId !== actor.roomId) {
-        throw new ActionError("target_gone", "That player left because they're a coward smh");
-      }
-      targets.push({ id, ref: targetRefs[i], data, selfTarget });
-    }
-
-    const roomRef = doc(db, "rooms", actor.roomId);
-    const roomSnap = await tx.get(roomRef);
-    if (!roomSnap.exists()) throw new ActionError("invalid", "This room no longer exists :c");
-
-    const room = roomSnap.data();
-    const startedAt = (room.startedAt === undefined ? room.createdAt : room.startedAt) as
-      | Timestamp
-      | null
-      | undefined;
-    if (!startedAt) throw new ActionError("not_started", "The game hasn't started yet, be patient... gosh");
-    const mode = room.mode as RoomMode;
-    const now = Date.now();
-    const tick = getRegenTick(mode, startedAt.toMillis(), now);
-
-    const actorRegen = computeRegen(actor, tick);
-    const actorStats = withDefaults(actor.stats);
-    const actorVitals: Vitals = {
-      health: actorRegen?.health ?? actorStats.health,
-      mana: actorRegen?.mana ?? actorStats.mana,
-      coins: actorRegen?.coins ?? actorStats.coins,
-    };
-    if (actorVitals.health <= 0) {
-      throw new ActionError("actor_dead", "You're dead. This isn't BOTC, so you can only spectate.");
-    }
-
-    const equipment = actor.equipment ?? {};
-    const enhancements = actor.enhancements ?? {};
-    const item = getEquippedItem(equipment, slot);
-    if (!item) {
-      throw new ActionError("no_item", "That item has vanished... just kidding you removed it yourself");
-    }
-    if (getAttackMode(item.attackMode) !== "multi" || ACTION_KINDS[item.type] !== "attack") {
+    if (item.attackMode === "multi" && kind !== "attack") {
       throw new ActionError("invalid", `${item.name} can't be used for a multi attack.`);
     }
 
+    // The weapon has a cooldown. Spells don't: they cost mana instead
     const mine = getBreakdowns(actor.stats, actor.points, equipment, enhancements);
-    const cooldownMs = getAttackCooldownMs(slot, mode, mine.attackSpeed.total);
+    const cooldownMs = getAttackCooldownMs(slot, room.mode, mine.attackSpeed.total);
     const readyAt = actor.cooldowns?.[slot] ?? 0;
     if (cooldownMs > 0 && now < readyAt) {
       throw new ActionError(
         "on_cooldown",
         `${item.name} is on cooldown for ${formatCountdown(readyAt - now)}.`
       );
+    }
+
+    for (const t of targets) {
+      if (t.vitals.health <= 0) {
+        throw new ActionError(
+          "target_down",
+          kind === "heal" ? `Healing them is no use, they're already dead.` : `Why would you attack a dead player?`
+        );
+      }
     }
 
     const manaCost = item.manaCost ?? 0;
@@ -355,120 +156,114 @@ export async function performMultiAction(
       );
     }
 
-    const targetStates = targets.map((target) => {
-      const regen = target.selfTarget ? actorRegen : computeRegen(target.data, tick);
-      const stats = withDefaults(target.data.stats);
-      return {
-        ...target,
-        regen,
-        stats,
-        vitals: target.selfTarget ? actorVitals : {
-          health: regen?.health ?? stats.health,
-          mana: regen?.mana ?? stats.mana,
-          coins: regen?.coins ?? stats.coins,
-        },
-        startHealth: target.selfTarget
-          ? actorVitals.health
-          : regen?.health ?? stats.health,
-      };
-    });
-    for (const target of targetStates) {
-      if (target.vitals.health <= 0) {
-        throw new ActionError("target_down", "Why would you attack a dead player?");
-      }
-    }
-
+    // Apply the item to each target
+    const actorStats = withDefaults(actor.stats);
     const actorName = actor.name ?? "Player";
-    const actorExtra: Record<string, number> = {};
-    const entries: LogEntry[] = [];
+    const entries: LogEntry[] = []; // in the order things happened
     const results: ActionResult[] = [];
-    const baseDamage = getAttackDamage(slot, equipment, enhancements).total;
-    let level = actorStats.level;
-    let levelXp = actorStats.levelXp;
-    let nextLevelXp = actorStats.nextLevelXp;
-    let abilityPoints = actorStats.abilityPoints;
+    const baseDamage = kind === "attack" ? getAttackDamage(slot, equipment, enhancements).total : 0;
+    // XP carries from one target to the next, so a big multi-hit can level you up part way through
+    let progress = { ...actorStats };
+    let earnedXp = false;
 
-    for (const target of targetStates) {
-      const targetBreakdowns = getBreakdowns(
-        target.data.stats,
-        target.data.points,
-        target.data.equipment,
-        target.data.enhancements
-      );
+    for (const t of targets) {
+      const targetName = t.data.name ?? "Player";
+      const theirs = getBreakdowns(t.data.stats, t.data.points, t.data.equipment, t.data.enhancements);
+
+      if (kind === "heal") {
+        // A flat amount and/or a percentage of the target's max health, never past the max
+        const { raw, percent } = getHealing(slot, equipment, enhancements);
+        const maxHealth = Math.max(1, theirs.maxHealth.total);
+        const amount = raw + (maxHealth * percent) / 100;
+        if (!(amount > 0)) throw new ActionError("invalid", `That item doesn't perform healing capabilities`);
+
+        const newHealth = round2(Math.min(maxHealth, t.vitals.health + amount));
+        const healed = round2(newHealth - t.vitals.health);
+        if (healed <= 0) {
+          // Refused before anything is charged, so no mana is wasted
+          throw new ActionError("nothing_to_heal", `They're already at max hp, why would you heal them?`);
+        }
+
+        t.vitals.health = newHealth;
+        entries.push({ kind: "heal", at: now, healer: actorName, patient: targetName, amount: healed });
+        results.push({ kind: "heal", healed, targetHealth: newHealth });
+        continue;
+      }
+
+      // Crit roll, strength, crit damage, and the target's defence
       const hit = resolveHit({
         baseDamage,
         strength: mine.strength.total,
         critChance: mine.critChance.total,
         critDamage: mine.critDamage.total,
-        defence: targetBreakdowns.defence.total,
+        defence: theirs.defence.total,
       });
-      const newHealth = Math.max(0, target.vitals.health - hit.damage);
-      target.vitals.health = newHealth;
+      const newHealth = Math.max(0, t.vitals.health - hit.damage);
+      t.vitals.health = newHealth;
 
-      const progress = target.selfTarget
+      // XP equal to the damage, with level-ups. Hitting yourself earns nothing.
+      // Coins are not earned from damage: they arrive on the coin tick (regen.ts).
+      const xp = t.self
         ? null
-        : applyXp(level, levelXp, nextLevelXp, hit.damage);
-      if (progress) {
-        level = progress.level;
-        levelXp = progress.levelXp;
-        nextLevelXp = progress.nextLevelXp;
-        abilityPoints += progress.apGained;
+        : applyXp(progress.level, progress.levelXp, progress.nextLevelXp, hit.damage);
+      if (xp) {
+        earnedXp = true;
+        progress = {
+          ...progress,
+          level: xp.level,
+          levelXp: xp.levelXp,
+          nextLevelXp: xp.nextLevelXp,
+          abilityPoints: progress.abilityPoints + xp.apGained,
+        };
       }
 
       entries.push({
         kind: "attack",
         at: now,
         attacker: actorName,
-        victim: target.data.name ?? "Player",
+        victim: targetName,
         verb: ATTACK_VERBS[item.type] ?? "attacked",
         damage: hit.damage,
         crit: hit.crit,
       });
-      if (newHealth <= 0) {
-        entries.push({ kind: "death", at: now, player: target.data.name ?? "Player" });
-      }
+      // The death message comes after the final hit, so it sits above it in the newest-first log
+      if (newHealth <= 0) entries.push({ kind: "death", at: now, player: targetName });
 
       results.push({
         kind: "attack",
         damage: hit.damage,
         crit: hit.crit,
         targetHealth: newHealth,
-        xpGained: progress ? hit.damage : 0,
-        levelsGained: progress?.levelsGained ?? 0,
-        apGained: progress?.apGained ?? 0,
+        xpGained: xp ? hit.damage : 0,
+        levelsGained: xp?.levelsGained ?? 0,
+        apGained: xp?.apGained ?? 0,
       });
     }
 
+    // Spend mana (spells), start the cooldown (weapon), and bank the XP
     actorVitals.mana -= manaCost;
+    const actorExtra: Record<string, number> = {};
     if (cooldownMs > 0) actorExtra[`cooldowns.${slot}`] = now + cooldownMs;
-    if (targets.some((target) => !target.selfTarget)) {
+    if (earnedXp) {
       Object.assign(actorExtra, {
-        "stats.level": level,
-        "stats.levelXp": levelXp,
-        "stats.nextLevelXp": nextLevelXp,
-        "stats.abilityPoints": abilityPoints,
+        "stats.level": progress.level,
+        "stats.levelXp": progress.levelXp,
+        "stats.nextLevelXp": progress.nextLevelXp,
+        "stats.abilityPoints": progress.abilityPoints,
       });
     }
 
-    const vitalsWrite = (vitals: Vitals, regen: RegenResult | null): Record<string, number> => ({
-      "stats.health": vitals.health,
-      "stats.mana": vitals.mana,
-      "stats.coins": vitals.coins,
-      ...(regen ? { regenTick: regen.tick } : {}),
-    });
-    tx.update(actorRef, { ...vitalsWrite(actorVitals, actorRegen), ...actorExtra });
-
-    for (const target of targetStates) {
-      if (
-        target.selfTarget ||
-        (!target.regen && target.vitals.health === target.startHealth)
-      ) continue;
-      tx.update(target.ref, vitalsWrite(target.vitals, target.regen));
+    // Write everything: each player's health and mana (with any regen collected), and the log
+    tx.update(actorRef, { ...regenWrite(actorVitals, actorRegen), ...actorExtra });
+    for (const t of targets) {
+      if (t.self || (!t.regen && t.vitals.health === t.startHealth)) continue;
+      tx.update(doc(db, "players", t.id), regenWrite(t.vitals, t.regen));
     }
 
-    let log = room.log as LogEntry[] | undefined;
+    let log = room.log;
     for (const entry of entries) log = pushLog(log, entry);
     tx.update(roomRef, { log });
+
     return results;
   });
 }

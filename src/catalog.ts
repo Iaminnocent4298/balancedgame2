@@ -1,12 +1,12 @@
 import type { Equipment } from "./equipment";
 import {
   defineCatalog, shopsOf, slotAccepts,
-  type CatalogEntry, type Item, type SlotId,
+  type CatalogEntry, type Enhancement, type Item, type SlotId,
 } from "./items";
 import type { ShopId } from "./shops";
 
 // ===== EVERYTHING that can be bought, owned, or applied lives here =====
-// `shop` says where an entry is sold: "itemBases", "enhancements", "limited",
+// `shop` says where an entry is sold: a shop id from shops.ts ("basicItems", "enhancements", "limited"),
 // or a list like ["enhancements", "limited"]. Leave it out for items that aren't sold anywhere.
 // Shop tables list entries in the order written below (items, then enhancements, then expanders).
 export const CATALOG = defineCatalog({
@@ -531,6 +531,10 @@ function byKind<K extends CatalogEntry["kind"]>(kind: K) {
 export const ITEMS = byKind("item");
 export const ENHANCEMENTS = byKind("enhancement");
 export const EXPANDERS = byKind("expander");
+
+// The enhancements for a list of enhancement ids (ids that aren't in the catalog are skipped)
+export const resolveEnhancements = (ids: readonly string[] | undefined): Enhancement[] =>
+  (ids ?? []).flatMap((id) => (ENHANCEMENTS[id] ? [ENHANCEMENTS[id]] : []));
 
 export const CATALOG_BY_ID: Record<string, CatalogEntry> = Object.fromEntries(
   CATALOG.map((e) => [e.id, e])

@@ -1,18 +1,10 @@
 import { doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
-import { DEFAULT_STATS, POINT_RATES, type Stats } from "./stats";
-import type { Enhancements, Equipment } from "./equipment";
+import type { PlayerDoc } from "./player";
+import { POINT_RATES, withDefaults, type Stats } from "./stats";
 import { clampVitals } from "./regen";
 import { DAY_LENGTH_MS } from "./gameClock";
 import type { RoomMode } from "./rooms";
-
-export type PointsState = {
-  available: number; // unspent ability points
-  spent: Stats; // field -> AP spent in it
-  stats: Stats | null; // base stats (for the live totals)
-  equipment: Equipment | null;
-  enhancements: Enhancements | null;
-};
 
 export function getPointsChangeCooldownUntil(
   lastChangedAt: number | undefined,
@@ -38,12 +30,11 @@ export async function confirmPoints(
   const playerRef = doc(db, "players", uid);
 
   await runTransaction(db, async (tx) => {
-    const data = (await tx.get(playerRef)).data();
-    const available = (data?.stats?.abilityPoints as number | undefined) ?? DEFAULT_STATS.abilityPoints;
-    const currentPoints = (data?.points as Stats | undefined) ?? {};
-    const currentLevel = (data?.stats?.level as number | undefined) ?? DEFAULT_STATS.level;
-    const lastChangedAt = data?.pointsChangedAt as number | undefined;
-    const lastChangedLevel = data?.pointsChangedLevel as number | undefined;
+    const data = (await tx.get(playerRef)).data() as PlayerDoc | undefined;
+    const { abilityPoints: available, level: currentLevel } = withDefaults(data?.stats);
+    const currentPoints = data?.points ?? {};
+    const lastChangedAt = data?.pointsChangedAt;
+    const lastChangedLevel = data?.pointsChangedLevel;
     const cooldownUntil = getPointsChangeCooldownUntil(
       lastChangedAt,
       lastChangedLevel,

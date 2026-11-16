@@ -1,5 +1,5 @@
 import { COMPOSITE_FIELDS, POINT_RATES, withDefaults, type Stats } from "./stats";
-import { ENHANCEMENTS, getEquippedItem } from "./catalog";
+import { getEquippedItem, resolveEnhancements } from "./catalog";
 import type { SlotId } from "./items";
 import type { Enhancements, Equipment } from "./equipment";
 
@@ -27,7 +27,7 @@ export function getEquipmentBonuses(
     const item = getEquippedItem(equipment, slot);
     if (!item) continue;
     add(item.stats);
-    for (const id of enhancements?.[slot] ?? []) add(ENHANCEMENTS[id]?.stats);
+    for (const enhancement of resolveEnhancements(enhancements?.[slot])) add(enhancement.stats);
   }
   return sum;
 }

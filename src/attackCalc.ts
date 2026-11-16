@@ -1,5 +1,5 @@
 import type { Enhancements, Equipment } from "./equipment";
-import { ENHANCEMENTS, getEquippedItem } from "./catalog";
+import { getEquippedItem, resolveEnhancements } from "./catalog";
 import { ARMOUR_SLOTS, type SlotId } from "./items";
 import { round2 } from "./format";
 
@@ -14,7 +14,9 @@ function statFromSlot(
   const item = getEquippedItem(equipment, slot);
   if (!item) return 0;
   let total = item.stats?.[field] ?? 0;
-  for (const id of enhancements[slot] ?? []) total += ENHANCEMENTS[id]?.stats?.[field] ?? 0;
+  for (const enhancement of resolveEnhancements(enhancements[slot])) {
+    total += enhancement.stats?.[field] ?? 0;
+  }
   return total;
 }
 

@@ -4,7 +4,7 @@ import { collectRegen } from "./collectRegen";
 import type { Loadout } from "./equipment";
 import CatalogTooltip from "./CatalogTooltip";
 import { formatCountdown, formatNumber } from "./format";
-import { getSeasonInfo } from "./gameClock";
+import { getSeasonInfo, realNow } from "./gameClock";
 import {
   GEAR_SLOTS, SLOTS, SPELL_SLOTS, getPrice, getSlot,
   type CatalogEntry, type Enhancement, type Expander, type Item, type SlotId,
@@ -100,7 +100,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
   // Rechecked at the moment of purchase, in case the stock rotated while the player was deciding
   function assertOnSale(entry: CatalogEntry) {
     if (!rotating) return;
-    const { seasonIndex } = getSeasonInfo(room.mode, getStartMs(room) ?? Date.now(), Date.now());
+    const { seasonIndex } = getSeasonInfo(room.mode, getStartMs(room) ?? 0, realNow()); // shops only open once the game has started
     const onSale = getRotation(room.id, seasonIndex, entriesForShop(shopId), rotating.slots);
     if (!onSale.some((e) => e.id === entry.id)) {
       throw new PurchaseError(

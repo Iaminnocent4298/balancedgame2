@@ -26,7 +26,7 @@ export default function LogTab({ room }: { room: Room }) {
     }
   }
 
-  const roomStart = getStartMs(room) ?? Date.now();
+  const roomStart = getStartMs(room) ?? 0; // there is no log until the game has started
   const log = room.log ?? [];
 
   return (

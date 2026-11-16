@@ -19,7 +19,7 @@ export default function AdminPanel({ onSpectate }: { onSpectate: (roomId: string
   const sorted = rooms
     ? [...rooms].sort(
         (a, b) =>
-          (b.createdAt?.toMillis() ?? Date.now()) - (a.createdAt?.toMillis() ?? Date.now())
+          (b.createdAt?.toMillis() ?? 0) - (a.createdAt?.toMillis() ?? 0)
       )
     : [];
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Loadout } from "./equipment";
-import { computeRegen, getRegenTick } from "./regen";
+import { computeRegen, getRegenTick, vitalsOf } from "./regen";
 import {
   getStartMs, subscribeToRoom, subscribeToRoomPlayers,
   type Room, type RoomMode, type RoomPlayer,
@@ -53,15 +53,7 @@ export default function RoomDataProvider({ roomId, uid, children }: Props) {
       stored?.map((p) => {
         const regen = computeRegen(p, currentTick);
         if (!regen) return p;
-        return {
-          ...p,
-          stats: {
-            ...withDefaults(p.stats),
-            health: regen.health,
-            mana: regen.mana,
-            coins: regen.coins,
-          },
-        };
+        return { ...p, stats: { ...withDefaults(p.stats), ...vitalsOf(p.stats, regen) } };
       }),
     [stored, currentTick]
   );

@@ -34,10 +34,8 @@ export const SPELL_TYPES: ItemTypeId[] = [
   "healing_spell", "damage_spell", "aoe_spell", "ultimate_spell",
 ];
 
+// How an item is aimed when used from the Action tab: at one player, or at several
 export type AttackMode = "single" | "multi";
-
-export const getAttackMode = (attackMode?: string): AttackMode | null =>
-  attackMode === "single" || attackMode === "multi" ? attackMode : null;
 
 // ===== The catalog: everything with a price and a rarity =====
 // Items (gear and spells), enhancements, and expanders all live in catalog.ts.
@@ -50,7 +48,6 @@ type Common = {
   value: number; // in coins. Also the shop price unless `price` is set
   description?: string; // lore
   levelReq?: number; // minimum level to buy it. Omit if none
-  attackMode?: string;
   shop?: ShopId | ShopId[]; // which shop(s) sell it. Omit if it isn't sold anywhere
   price?: number; // shop price, if it should differ from `value`
 };
@@ -60,6 +57,7 @@ export type ItemDef = Common & {
   type: ItemTypeId; // decides which slots it fits in
   enhancementSlots: number; // base enhancement slots (0 = none). Required on every item
   manaCost?: number; // SPELLS ONLY: whole-number mana per cast. Required for spells
+  attackMode?: AttackMode; // USABLE ITEMS ONLY (see ACTION_KINDS): aimed at one player or several
   stats?: ItemStats; // keys are stat field names, e.g. { damage: 5, maxHealth: 50 }
 };
 export type EnhancementDef = Common & { stats?: ItemStats };
@@ -70,7 +68,7 @@ export type Enhancement = EnhancementDef & { kind: "enhancement" };
 export type Expander = ExpanderDef & { kind: "expander" };
 export type CatalogEntry = Item | Enhancement | Expander;
 
-export const shopsOf = (e: CatalogEntry): ShopId[] =>
+export const shopsOf = (e: Pick<CatalogEntry, "shop">): ShopId[] =>
   e.shop === undefined ? [] : Array.isArray(e.shop) ? e.shop : [e.shop];
 
 export const getPrice = (e: CatalogEntry) => e.price ?? e.value;
@@ -102,8 +100,7 @@ export function defineCatalog(input: {
     if (e.levelReq !== undefined && !(e.levelReq >= 1)) {
       throw new Error(`${label} "${e.id}" has an invalid levelReq`);
     }
-    const shops = e.shop === undefined ? [] : Array.isArray(e.shop) ? e.shop : [e.shop];
-    for (const shop of shops) {
+    for (const shop of shopsOf(e)) {
       if (!(shop in SHOPS)) throw new Error(`${label} "${e.id}" is in unknown shop "${shop}"`);
     }
   }
@@ -124,6 +121,9 @@ export function defineCatalog(input: {
     if (e.manaCost !== undefined && !(Number.isInteger(e.manaCost) && e.manaCost >= 0)) {
       throw new Error(`Item "${e.id}" needs a whole-number manaCost of 0 or more`);
     }
+    const usable = ACTION_KINDS[e.type] !== undefined;
+    if (usable && !e.attackMode) throw new Error(`Item "${e.id}" can be used, so it needs an attackMode`);
+    if (!usable && e.attackMode) throw new Error(`Item "${e.id}" has an attackMode but can't be used`);
     for (const key of Object.keys(e.stats ?? {})) {
       if (ENHANCEMENT_ONLY_FIELDS.includes(key)) {
         throw new Error(`Item "${e.id}" can't modify "${key}": only enhancements can`);

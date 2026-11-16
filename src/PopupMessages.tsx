@@ -1,5 +1,5 @@
 import type { ActionFailure } from "./action";
-import type { AttackMode, Enhancement, Expander, Item } from "./items";
+import type { Enhancement, Expander, Item } from "./items";
 import type { PurchaseFailure } from "./shop";
 import type { ConfirmOptions, PopupOptions } from "./usePopup";
 
