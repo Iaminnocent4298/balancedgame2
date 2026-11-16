@@ -37,6 +37,15 @@ export function getAttackDamage(
   return { selected, armour, total: selected + armour };
 }
 
+// The Attack Speed (%) that comes from the item you're using and ITS enhancements. It speeds up only
+// that item's cooldown, so it's added to the player's own Attack Speed (armour and points) at the
+// moment the cooldown is worked out, and is never part of the stats table.
+export const getItemAttackSpeed = (
+  slot: SlotId,
+  equipment: Equipment,
+  enhancements: Enhancements
+) => statFromSlot(slot, "attackSpeed", equipment, enhancements);
+
 // What a healing spell heals: a flat amount and/or a percentage of the target's max health
 export function getHealing(slot: SlotId, equipment: Equipment, enhancements: Enhancements) {
   return {

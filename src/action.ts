@@ -1,6 +1,6 @@
 import { doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
-import { getAttackDamage, getHealing, resolveHit } from "./attackCalc";
+import { getAttackDamage, getHealing, resolveHit, getItemAttackSpeed } from "./attackCalc";
 import { getEquippedItem } from "./catalog";
 import { getAttackCooldownMs } from "./cooldowns";
 import { formatCountdown, round2 } from "./format";
@@ -130,7 +130,9 @@ export async function performAction(
 
     // The weapon has a cooldown. Spells don't: they cost mana instead
     const mine = getBreakdowns(actor.stats, actor.points, equipment, enhancements);
-    const cooldownMs = getAttackCooldownMs(slot, room.mode, mine.attackSpeed.total);
+    // Your own Attack Speed (armour and points) plus what the item you're swinging adds to itself
+    const attackSpeed = mine.attackSpeed.total + getItemAttackSpeed(slot, equipment, enhancements);
+    const cooldownMs = getAttackCooldownMs(slot, room.mode, attackSpeed);
     const readyAt = actor.cooldowns?.[slot] ?? 0;
     if (cooldownMs > 0 && now < readyAt) {
       throw new ActionError(

@@ -1,6 +1,6 @@
-import { COMPOSITE_FIELDS, POINT_RATES, withDefaults, type Stats } from "./stats";
+import { COMPOSITE_FIELDS, POINT_RATES, USE_BOUND_FIELDS, withDefaults, type Stats } from "./stats";
+import { USED_SLOTS, type SlotId } from "./items";
 import { getEquippedItem, resolveEnhancements } from "./catalog";
-import type { SlotId } from "./items";
 import type { Enhancements, Equipment } from "./equipment";
 
 export type StatBreakdown = {
@@ -12,20 +12,25 @@ export type StatBreakdown = {
 
 // Sum of the stat modifiers of everything equipped, plus the enhancements on it.
 // Items in the wrong slot or missing from the catalog are ignored.
+// Use-bound stats (Attack Speed) on a weapon or spell, or on its enhancements, are left out: they
+// only speed up that item's own use (see getItemAttackSpeed). Armour's still count.
 export function getEquipmentBonuses(
   equipment: Equipment | null | undefined,
   enhancements?: Enhancements | null
 ): Stats {
   const sum: Stats = {};
-  const add = (stats?: Record<string, number>) => {
-    for (const [key, amount] of Object.entries(stats ?? {})) {
-      sum[key] = (sum[key] ?? 0) + amount;
-    }
-  };
 
   for (const slot of Object.keys(equipment ?? {}) as SlotId[]) {
     const item = getEquippedItem(equipment, slot);
     if (!item) continue;
+
+    const leftOut = USED_SLOTS.includes(slot) ? USE_BOUND_FIELDS : [];
+    const add = (stats?: Record<string, number>) => {
+      for (const [key, amount] of Object.entries(stats ?? {})) {
+        if (!leftOut.includes(key)) sum[key] = (sum[key] ?? 0) + amount;
+      }
+    };
+
     add(item.stats);
     for (const enhancement of resolveEnhancements(enhancements?.[slot])) add(enhancement.stats);
   }

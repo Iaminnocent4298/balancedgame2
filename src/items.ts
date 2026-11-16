@@ -195,6 +195,8 @@ export const SLOTS: SlotDef[] = [
 export const GEAR_SLOTS: SlotId[] = ["weapon", "helmet", "chestplate", "leggings", "boots"];
 export const ARMOUR_SLOTS: SlotId[] = ["helmet", "chestplate", "leggings", "boots"];
 export const SPELL_SLOTS: SlotId[] = ["spell1", "spell2", "spell3", "spell4"];
+// Slots whose item is used from the Action tab (everything else is armour, which is simply worn)
+export const USED_SLOTS: SlotId[] = ["weapon", ...SPELL_SLOTS];
 
 export const getSlot = (id: SlotId): SlotDef => SLOTS.find((s) => s.id === id)!;
 

@@ -20,7 +20,7 @@ html, body, #root { width: 100%; max-width: none; }
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "Ubuntu", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: "Ubuntu", "Noto Sans Symbols 2", "Noto Sans Symbols", system-ui, sans-serif;
   color: #fff; /* text outside boxes, like "Loading..." */
   background-color: var(--bg-bottom);
   background-image: linear-gradient(to bottom, var(--bg-top), var(--bg-bottom));

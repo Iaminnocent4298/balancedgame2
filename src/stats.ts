@@ -33,7 +33,7 @@ export const STATS: StatDef[] = [
   },
   {
     id: "coins", icon: "$", label: "Coins",
-    description: "Use coins to purchase literally anything in the shop. Gain coins by dealing damage!",
+    description: "Use coins to purchase shop items. Gain more coins by increasing coin gain?",
     plain: ["coins"],   // a plain value: not split into base/points/equipment
     fields: { coins: 50 },
     display: (s) => n(s.coins),
@@ -144,6 +144,16 @@ export const ENHANCEMENT_ONLY_FIELDS = ["coinGain"];
 for (const key of ENHANCEMENT_ONLY_FIELDS) {
   if (!COMPOSITE_FIELDS.includes(key)) {
     throw new Error(`"${key}" is listed as enhancement-only but isn't a modifiable stat field`);
+  }
+}
+
+// Fields that belong to the item being USED, not to the player. An item in a weapon or spell slot
+// (and that item's own enhancements) adds these only to its own use, so they never appear in the
+// player's totals. Armour, ability points, and the base value still count toward the player.
+export const USE_BOUND_FIELDS = ["attackSpeed"];
+for (const key of USE_BOUND_FIELDS) {
+  if (!COMPOSITE_FIELDS.includes(key)) {
+    throw new Error(`"${key}" is listed as use-bound but isn't a modifiable stat field`);
   }
 }
 

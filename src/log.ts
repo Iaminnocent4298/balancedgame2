@@ -46,7 +46,7 @@ export function describeParts(entry: LogEntry): Segment[] {
   switch (entry.kind) {
     case "attack":
       return [
-        ...(entry.crit ? [{ text: " (Crit!)", kind: "crit" as const }] : []),
+        ...(entry.crit ? [{ text: "(Crit!) ", kind: "crit" as const }] : []),
         { text: entry.attacker, kind: "name" },
         { text: ` ${entry.verb} ` },
         { text: entry.victim, kind: "name" },
