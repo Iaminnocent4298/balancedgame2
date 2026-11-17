@@ -18,14 +18,14 @@ export type StatDef = {
 
 export const STATS: StatDef[] = [
   {
-    id: "level", icon: "✷", label: "Level",
+    id: "level", icon: "level", label: "Level",
     description: "Gain xp by dealing damage! When levelling up, you gain ability points",
     plain: ["level", "levelXp", "nextLevelXp"],
     fields: { level: 0, levelXp: 0, nextLevelXp: 50 },
     display: (s) => `${n(s.level)} ➩ ${n(s.level+1)} [${n(s.levelXp)}/${n(s.nextLevelXp)}]`,
   },
   {
-    id: "abilityPoints", icon: "✹", label: "Ability Points",
+    id: "abilityPoints", icon: "abilityPoints", label: "Ability Points",
     description: "Gain AP when levelling up! Use them on speccing into your stats",
     plain: ["abilityPoints"],
     fields: { abilityPoints: 0 },
@@ -45,7 +45,7 @@ export const STATS: StatDef[] = [
     display: (s) => n(s.coinGain),
   },
   {
-    id: "health", icon: "❤", label: "Health",
+    id: "health", icon: "health", label: "Health",
     description: "If this stat is 0 then you're dead",
     plain: ["health"],
     perPoint: { maxHealth: 25 },
@@ -54,7 +54,7 @@ export const STATS: StatDef[] = [
     display: (s) => `${n(s.health)}/${n(s.maxHealth)}`,
   },
   {
-    id: "healthRegen", icon: "❣", label: "Health Regen",
+    id: "healthRegen", icon: "healthRegen", label: "Health Regen",
     description: "Health regen tick occurs at noon and midnight of each in-game day",
     perPoint: { healthRegenRaw: 5 },
     fields: { healthRegenRaw: 0, healthRegenPercent: 1 },
@@ -65,7 +65,7 @@ export const STATS: StatDef[] = [
     display: (s) => `${n(s.healthRegenRaw)} + ${n(s.healthRegenPercent)}%`,
   },
   {
-    id: "mana", icon: "✸", label: "Mana",
+    id: "mana", icon: "mana", label: "Mana",
     description: "Casting spells costs mana to use them",
     plain: ["mana"],
     perPoint: { maxMana: 5 },
@@ -74,7 +74,7 @@ export const STATS: StatDef[] = [
     display: (s) => `${n(s.mana)}/${n(s.maxMana)}`,
   },
   {
-    id: "manaRegen", icon: "⸎", label: "Mana Regen",
+    id: "manaRegen", icon: "manaRegen", label: "Mana Regen",
     description: "Mana regen tick occurs at noon and midnight of each in-game day",
     perPoint: { manaRegenRaw: 0.5 },
     fields: { manaRegenRaw: 5, manaRegenPercent: 1 },
@@ -85,14 +85,14 @@ export const STATS: StatDef[] = [
     display: (s) => `${n(s.manaRegenRaw)} + ${n(s.manaRegenPercent)}%`,
   },
   {
-    id: "strength", icon: "✤", label: "Strength",
+    id: "strength", icon: "strength", label: "Strength",
     description: "Strength increases the amount of damage you deal on any attack",
     perPoint: { strength: 1 },
     fields: { strength: 0 },
     display: (s) => n(s.strength),
   },
   {
-    id: "critChance", icon: "✦", label: "Crit Chance",
+    id: "critChance", icon: "critChance", label: "Crit Chance",
     description: "Crit Chance is the percentage chance you deal a critical hit",
     perPoint: { critChance: 0.5 },
     fields: { critChance: 25 },
@@ -100,14 +100,14 @@ export const STATS: StatDef[] = [
     display: (s) => `${n(s.critChance)}%`,
   },
   {
-    id: "critDamage", icon: "☠", label: "Crit Damage",
+    id: "critDamage", icon: "critDamage", label: "Crit Damage",
     description: "Crit Damage increases the amount of damage dealt during a critical hit",
     perPoint: { critDamage: 1 },
     fields: { critDamage: 50 },
     display: (s) => n(s.critDamage),
   },
   {
-    id: "attackSpeed", icon: "⚔", label: "Attack Speed",
+    id: "attackSpeed", icon: "attackSpeed", label: "Attack Speed",
     description: "Each 100 Attack Speed increases weapon attack rate by 100%, halving cooldown",
     perPoint: { attackSpeed: 1 },
     fields: { attackSpeed: 0 },
@@ -115,7 +115,7 @@ export const STATS: StatDef[] = [
     display: (s) => `${n(s.attackSpeed)}%`,
   },
   {
-    id: "defence", icon: "❈", label: "Defence",
+    id: "defence", icon: "defence", label: "Defence",
     description: "Defence decreases the amount of damage you would have taken",
     perPoint: { defence: 1 },
     fields: { defence: 0 },
@@ -178,9 +178,9 @@ for (const def of STATS) {
 export type ItemStatDef = { id: string; icon: string; label: string; suffix?: string };
 
 export const ITEM_STATS: ItemStatDef[] = [
-  { id: "damage", icon: "🗡", label: "Damage" },
-  { id: "healRaw", icon: "❣", label: "Heal" },
-  { id: "healPercent", icon: "❣", label: "Heal", suffix: "% max health" },
+  { id: "damage", icon: "damage", label: "Damage" },
+  { id: "healRaw", icon: "heal", label: "Heal" },
+  { id: "healPercent", icon: "heal", label: "Heal", suffix: "% max health" },
 ];
 
 for (const s of ITEM_STATS) {

@@ -183,8 +183,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
    case-sensitive. The table is purple, so use LIGHT colours: dark ones
    (like dark red) will be hard to read.
    To colour only the stat's name, use ".stat-health th" instead. */
-.stat-level         { color: #fe96f9; }
-.stat-abilityPoints { color: #00fd3b; }
+.stat-level         { color: #a335ee; }
+.stat-abilityPoints { color: #55ff55; }
 .stat-coins         { color: #fba800; }
 .stat-coinGain      { color: #ffe9a0; }
 .stat-health        { color: #ff6666; }
@@ -199,8 +199,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 
 /* Non stat colours for tooltips */
 .stat-damage        { color: #ff5555; }
-.stat-healRaw, .stat-healPercent, .stat-maxHealth     { color: #ff6666; }
-.stat-healthRegenRaw, .stat-healthRegenPercent       { color: #ff6666; }
+.stat-healRaw, .stat-healPercent, .stat-maxHealth     { color: #d13228; }
+.stat-healthRegenRaw, .stat-healthRegenPercent       { color: #d13228; }
 .stat-manaRegenRaw, .stat-manaRegenPercent           { color: #00b0ab; }
 .stat-maxMana       { color: #00fbf4; }
 
@@ -528,4 +528,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 /* ===== Changelog ===== */
 .bug {
   color: #ff5555;
+}
+
+/* ===== Pixel-art stat icons (8x8 PNGs from src/icons/) ===== */
+.icon {
+  --icon-size: 16px; /* 8px x 2: keep it a whole multiple of 8 so every pixel stays sharp */
+  width: var(--icon-size);
+  height: var(--icon-size);
+  image-rendering: pixelated;
+  vertical-align: -3px;
 }

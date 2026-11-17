@@ -5,6 +5,7 @@ import {
 } from "./items";
 import { describeField } from "./stats";
 import StatList from "./StatList";
+import Icon from "./Icon";
 
 type Props = {
   entry: CatalogEntry;
@@ -33,7 +34,7 @@ export default function CatalogTooltip({ entry, enhancements, extraSlots }: Prop
 
       {item?.manaCost !== undefined && (
         <div className="item-mana">
-          {describeField("mana").icon} Mana cost: {item.manaCost}
+          <Icon name={describeField("mana").icon} /> Mana cost: {item.manaCost}
         </div>
       )}
 

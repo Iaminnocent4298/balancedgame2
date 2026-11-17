@@ -3,6 +3,7 @@ import { getDisplayStats } from "./statCalc";
 import Tooltip from "./Tooltip";
 import { useRoomData } from "./useRoomData";
 import { youFirst } from "./rooms";
+import Icon from "./Icon"
 
 export default function StatsTab({ uid }: { uid: string }) {
   const { players } = useRoomData();
@@ -31,7 +32,7 @@ export default function StatsTab({ uid }: { uid: string }) {
             <tr key={def.id} className={`stat-${def.id}`}>
               <Tooltip content={def.description}>
                 <th scope="row">
-                  {def.icon} {def.label}
+                  <Icon name={def.icon} /> {def.label}
                 </th>
               </Tooltip>
               {sorted.map((p) => (

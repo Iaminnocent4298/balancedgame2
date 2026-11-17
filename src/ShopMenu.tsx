@@ -21,6 +21,7 @@ import { popupMessages } from "./PopupMessages";
 import Tooltip from "./Tooltip";
 import { usePopup, type Choice } from "./usePopup";
 import { useRoomData } from "./useRoomData";
+import Icon from "./Icon";
 
 // A table longer than this gets split into side-by-side tables, up to the cap
 const MAX_ROWS_PER_TABLE = 8;
@@ -95,7 +96,7 @@ export default function ShopMenu({ shopId, room, uid, onBack }: Props) {
 
   const current = wallet; // your gear and coins, already including any regen that's due
   const { coins, level } = current;
-  const coinIcon = describeField("coins").icon;
+  const coinIcon = <Icon name={describeField("coins").icon} label="coins" />;
 
   // Rechecked at the moment of purchase, in case the stock rotated while the player was deciding
   function assertOnSale(entry: CatalogEntry) {

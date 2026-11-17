@@ -8,6 +8,7 @@ import { formatNumber as round } from "./format";
 import Countdown from "./Countdown";
 import { usePopup } from "./usePopup";
 import { popupMessages } from "./PopupMessages";
+import Icon from "./Icon";
 
 export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () => void }) {
   const { me, room } = useRoomData();
@@ -89,7 +90,7 @@ export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () =>
       </div>
 
       <div className="box points-ap stat-abilityPoints">
-        {ap.icon} Ability Points remaining: <strong>{round(draftAvailable)}</strong>
+        <Icon name={ap.icon} /> Ability Points remaining: <strong>{round(draftAvailable)}</strong>
       </div>
 
       <div className="points-layout">
@@ -112,7 +113,7 @@ export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () =>
                     <tr key={field} className={`stat-${statId}`}>
                       <Tooltip content={`Each point gives +${round(rate)}${suffix} ${label}`}>
                         <th scope="row">
-                          {icon} {label}
+                          <Icon name={icon} /> {label}
                         </th>
                       </Tooltip>
                       <td>
@@ -168,7 +169,7 @@ export default function PointsMenu({ uid, onBack }: { uid: string; onBack: () =>
                   <tr key={def.id} className={`stat-${def.id}`}>
                     <Tooltip content={def.description}>
                       <th scope="row">
-                        {def.icon} {def.label}
+                        <Icon name={def.icon} /> {def.label}
                       </th>
                     </Tooltip>
                     <td>{def.display(stats)}</td>
